@@ -4,34 +4,57 @@ import android.content.Intent
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
+import android.widget.Button
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
 
 class MainActivity : AppCompatActivity() {
-    var webrtcUrl = "webrtc://${SRS_SERVER_IP}/live/livestream"
-    var peerConnection: PeerConnection? = null
+    private var webrtcUrl = "webrtc://${SRS_SERVER_IP}/live/livestream"
+    private var peerConnection: PeerConnection? = null
+    private val mainScope = MainScope()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        push()
-        pull()
+        findViewById<Button>(R.id.btn_push).setOnClickListener { push() }
+        findViewById<Button>(R.id.btn_pull).setOnClickListener { pull() }
+        findViewById<Button>(R.id.btn_stop).setOnClickListener { stop() }
+
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         stop()
+        super.onDestroy()
+    }
+
+    private val registerMediaProjectionPermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        pushCore(it.data)
+    }
+
+    private fun push() {
+        MediaProjectionForegroundService.start(this)
+        val mediaProjectionManager = getSystemService<MediaProjectionManager>()
+        registerMediaProjectionPermission.launch(mediaProjectionManager?.createScreenCaptureIntent())
     }
 
     private fun pull() {
         pullCore()
+    }
+
+    private fun stop() {
+        val surfaceViewRenderer = findViewById<SurfaceViewRenderer>(R.id.srv)
+        surfaceViewRenderer.release()
+        peerConnection?.dispose()
+        mainScope.cancel()
+        MediaProjectionForegroundService.stop(this)
     }
 
     private fun pullCore() {
@@ -55,11 +78,8 @@ class MainActivity : AppCompatActivity() {
                 .setAudioDeviceModule(audioDeviceModule)
                 .createPeerConnectionFactory()
 
-
-        //显示
         val surfaceViewRenderer = findViewById<SurfaceViewRenderer>(R.id.srv)
         surfaceViewRenderer.init(eglBaseContext, null)
-
 
         val rtcConfig = PeerConnection.RTCConfiguration(emptyList())
         rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
@@ -67,6 +87,7 @@ class MainActivity : AppCompatActivity() {
             override fun onAddStream(mediaStream: MediaStream) {
                 super.onAddStream(mediaStream)
                 if (mediaStream.videoTracks.isNotEmpty()) {
+                    //显示
                     mediaStream.videoTracks[0].addSink(surfaceViewRenderer)
                 }
                 if (mediaStream.audioTracks.isNotEmpty()) {
@@ -83,14 +104,16 @@ class MainActivity : AppCompatActivity() {
                     val offerSdp = description.description
                     peerConnection?.setLocalDescription(SdpAdapter("setLocalDescription"), description)
                     val srsBean = SrsRequestBean(description.description, webrtcUrl)
-                    MainScope().launch(Dispatchers.IO) {
+                    mainScope.launch(Dispatchers.IO) {
                         try {
                             val result = apiService.play(srsBean)
                             if (result.code == 0) {
                                 val remoteSdp = SessionDescription(SessionDescription.Type.ANSWER, convertAnswerSdp(offerSdp, result.sdp))
                                 peerConnection?.setRemoteDescription(SdpAdapter("setRemoteDescription"), remoteSdp)
                             } else {
-                                Toast.makeText(this@MainActivity, "网络请求失败，code：${result.code}", Toast.LENGTH_LONG).show()
+                                launch(Dispatchers.Main) {
+                                    Toast.makeText(this@MainActivity, "网络请求失败，code：${result.code}", Toast.LENGTH_LONG).show()
+                                }
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -112,21 +135,6 @@ class MainActivity : AppCompatActivity() {
 
             }
         }, MediaConstraints())
-    }
-
-    private val registerMediaProjectionPermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        pushCore(it.data)
-    }
-
-    private fun push() {
-        MediaProjectionForegroundService.start(this)
-        val mediaProjectionManager = getSystemService<MediaProjectionManager>()
-        registerMediaProjectionPermission.launch(mediaProjectionManager?.createScreenCaptureIntent())
-    }
-
-    private fun stop() {
-        peerConnection?.dispose()
-        MediaProjectionForegroundService.stop(this)
     }
 
     private fun pushCore(mediaProjectionPermissionResultData: Intent?) {
@@ -169,7 +177,7 @@ class MainActivity : AppCompatActivity() {
         val videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast)
         val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext)
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.capturerObserver)
-        videoCapturer.startCapture(2160, 1080, 60)
+        videoCapturer.startCapture(2160 / 2, 1080 / 2, 60)
         val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
 
 /*
@@ -193,14 +201,16 @@ class MainActivity : AppCompatActivity() {
                     //这个offerSdp将用于向SRS服务进行网络请求
                     val offerSdp = description.description
                     val srsBean = SrsRequestBean(offerSdp, webrtcUrl)
-                    MainScope().launch(Dispatchers.IO) {
+                    mainScope.launch(Dispatchers.IO) {
                         try {
                             val result = apiService.publish(srsBean)
                             if (result.code == 0) {
                                 val remoteSdp = SessionDescription(SessionDescription.Type.ANSWER, convertAnswerSdp(offerSdp, result.sdp))
                                 peerConnection?.setRemoteDescription(SdpAdapter("setRemoteDescription"), remoteSdp)
                             } else {
-                                Toast.makeText(this@MainActivity, "网络请求失败，code：${result.code}", Toast.LENGTH_LONG).show()
+                                launch(Dispatchers.Main) {
+                                    Toast.makeText(this@MainActivity, "网络请求失败，code：${result.code}", Toast.LENGTH_LONG).show()
+                                }
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
