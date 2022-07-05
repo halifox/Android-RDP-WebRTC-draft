@@ -7,7 +7,7 @@
     tools:context=".PullMoreActivity">
 
     <org.webrtc.SurfaceViewRenderer
-        android:id="@+id/srv"
+        android:id="@+id/srv1"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
