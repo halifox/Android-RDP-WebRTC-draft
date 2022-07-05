@@ -23,19 +23,14 @@ import io.netty.handler.codec.LengthFieldPrepender
 import io.netty.handler.codec.string.StringDecoder
 import io.netty.handler.codec.string.StringEncoder
 import io.netty.util.CharsetUtil
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
 import java.time.LocalTime
 
 class PushActivity : AppCompatActivity() {
 
-    private var peerConnection: PeerConnection? = null
-    private var localDescription: SessionDescription? = null
-    private val iceCandidates = mutableListOf<IceCandidate>()
+
     private val mainScope = MainScope()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,8 +72,56 @@ class PushActivity : AppCompatActivity() {
                                 pipeline.addLast(StringDecoder(CharsetUtil.UTF_8))
                                 pipeline.addLast(StringEncoder(CharsetUtil.UTF_8))
                                 pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
+                                    private var peerConnection: PeerConnection? = null
+                                    private var localDescription: SessionDescription? = null
+                                    private val iceCandidates = mutableListOf<IceCandidate>()
+
                                     override fun channelActive(ctx: ChannelHandlerContext) {
-                                        ctx.writeAndFlush(WebrtcMessage(localDescription, iceCandidates).toString())
+                                        //RTC配置
+                                        val rtcConfig = PeerConnection.RTCConfiguration(listOf())
+                                        rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
+                                        rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
+                                        rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
+                                        rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
+                                        rtcConfig.keyType = PeerConnection.KeyType.ECDSA
+                                        //创建对等连接
+                                        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver("push") {
+                                            override fun onIceCandidate(iceCandidate: IceCandidate) {
+                                                super.onIceCandidate(iceCandidate)
+                                                iceCandidates.add(iceCandidate)
+                                            }
+
+                                            override fun onAddStream(mediaStream: MediaStream) {
+                                                super.onAddStream(mediaStream)
+                                            }
+                                        })
+
+                                        val mediaStream = peerConnectionFactory.createLocalMediaStream("102")
+                                        mediaStream.addTrack(audioTrack)
+                                        mediaStream.addTrack(videoTrack)
+                                        peerConnection?.addStream(mediaStream)
+
+                                        val sdpConstraints = MediaConstraints()
+                                        sdpConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+                                        sdpConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+                                        peerConnection?.createOffer(object : SimpleSdpObserver("push-createOffer") {
+                                            override fun onCreateSuccess(description: SessionDescription) {
+                                                peerConnection?.setLocalDescription(SimpleSdpObserver("push-setLocalDescription"), description)
+                                                localDescription = description
+                                            }
+                                        }, sdpConstraints)
+                                        mainScope.launch {
+                                            while (localDescription == null && iceCandidates.isEmpty()) {
+                                                delay(100)
+                                            }
+                                            ctx.writeAndFlush(WebrtcMessage(localDescription, iceCandidates).toString())
+                                        }
+                                    }
+
+                                    override fun channelInactive(ctx: ChannelHandlerContext?) {
+                                        super.channelInactive(ctx)
+                                        peerConnection?.dispose()
+                                        peerConnection = null
                                     }
 
                                     override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
@@ -120,7 +163,9 @@ class PushActivity : AppCompatActivity() {
         registerMediaProjectionPermission.launch(mediaProjectionManager?.createScreenCaptureIntent())
     }
 
-
+    lateinit var audioTrack: AudioTrack
+    lateinit var videoTrack: VideoTrack
+    lateinit var peerConnectionFactory: PeerConnectionFactory
     private fun pushCore(mediaProjectionPermissionResultData: Intent?) {
         //EglBase
         val eglBase = EglBase.create()
@@ -134,7 +179,7 @@ class PushActivity : AppCompatActivity() {
         //音频设备模块
         val audioDeviceModule = JavaAudioDeviceModule.builder(this).createAudioDeviceModule()
         //对等连接Factory
-        val peerConnectionFactory = PeerConnectionFactory.builder()
+        peerConnectionFactory = PeerConnectionFactory.builder()
                 .setVideoEncoderFactory(encoderFactory)
                 .setVideoDecoderFactory(decoderFactory)
                 .setAudioDeviceModule(audioDeviceModule)
@@ -153,7 +198,7 @@ class PushActivity : AppCompatActivity() {
         //创建音频源
         val audioSource = peerConnectionFactory.createAudioSource(audioConstraints)
         //创建音轨
-        val audioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", audioSource)
+        audioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", audioSource)
 
         //屏幕捕获
         val videoCapturer = ScreenCapturerAndroid(mediaProjectionPermissionResultData, object : MediaProjection.Callback() {})
@@ -162,47 +207,14 @@ class PushActivity : AppCompatActivity() {
         val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext)
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.capturerObserver)
         videoCapturer.startCapture(2160, 1080, 60)
-        val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
+        videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
 
-        //RTC配置
-        val rtcConfig = PeerConnection.RTCConfiguration(listOf())
-        rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
-        rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
-        rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
-        rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
-        rtcConfig.keyType = PeerConnection.KeyType.ECDSA
-        //创建对等连接
-        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver("push") {
-            override fun onIceCandidate(iceCandidate: IceCandidate) {
-                super.onIceCandidate(iceCandidate)
-                iceCandidates.add(iceCandidate)
-            }
 
-            override fun onAddStream(mediaStream: MediaStream) {
-                super.onAddStream(mediaStream)
-            }
-        })
-
-        val mediaStream = peerConnectionFactory.createLocalMediaStream("102")
-        mediaStream.addTrack(audioTrack)
-        mediaStream.addTrack(videoTrack)
-        peerConnection?.addStream(mediaStream)
-
-        val sdpConstraints = MediaConstraints()
-        sdpConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
-        sdpConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
-        peerConnection?.createOffer(object : SimpleSdpObserver("push-createOffer") {
-            override fun onCreateSuccess(description: SessionDescription) {
-                peerConnection?.setLocalDescription(SimpleSdpObserver("push-setLocalDescription"), description)
-                localDescription = description
-            }
-        }, sdpConstraints)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         mainScope.cancel()
-        peerConnection?.dispose()
         MediaProjectionForegroundService.stop(this)
     }
 
