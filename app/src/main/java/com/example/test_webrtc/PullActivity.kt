@@ -110,10 +110,12 @@ class PullActivity : AppCompatActivity() {
                                     }
 
                                     override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
-                                        val message = Gson().fromJson(msg, Message::class.java)
-                                        peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), message.description)
-                                        message.iceCandidates.forEach { iceCandidate ->
-                                            peerConnection?.addIceCandidate(iceCandidate)
+                                        val webrtcMessage = Gson().fromJson(msg, WebrtcMessage::class.java)
+                                        webrtcMessage.description?.let {
+                                            peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), it)
+                                        }
+                                        webrtcMessage.iceCandidates.forEach {
+                                            peerConnection?.addIceCandidate(it)
                                         }
 
                                         peerConnection?.createAnswer(object : SimpleSdpObserver("pull-createAnswer") {
@@ -125,13 +127,10 @@ class PullActivity : AppCompatActivity() {
 
 
                                         mainScope.launch {
-                                            while (localDescription == null) {
+                                            while (localDescription == null && iceCandidates.isEmpty()) {
                                                 delay(100)
                                             }
-                                            while (iceCandidates.isEmpty()) {
-                                                delay(100)
-                                            }
-                                            ctx.writeAndFlush(Message(localDescription, iceCandidates).toString())
+                                            ctx.writeAndFlush(WebrtcMessage(localDescription, iceCandidates).toString())
                                         }
                                     }
                                 })

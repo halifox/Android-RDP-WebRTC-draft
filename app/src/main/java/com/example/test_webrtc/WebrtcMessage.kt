@@ -4,14 +4,14 @@ import com.google.gson.Gson
 import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 
-class Message {
+class WebrtcMessage {
     var description: SessionDescription? = null
     var iceCandidates: List<IceCandidate> = emptyList()
 
     constructor(json: String) {
-        val message = Gson().fromJson(json, Message::class.java)
-        this.description = message.description
-        this.iceCandidates = message.iceCandidates
+        val webrtcMessage = Gson().fromJson(json, WebrtcMessage::class.java)
+        this.description = webrtcMessage.description
+        this.iceCandidates = webrtcMessage.iceCandidates
     }
 
     constructor(description: SessionDescription?, iceCandidates: List<IceCandidate>) {

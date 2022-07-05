@@ -78,14 +78,16 @@ class PushActivity : AppCompatActivity() {
                                 pipeline.addLast(StringEncoder(CharsetUtil.UTF_8))
                                 pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
                                     override fun channelActive(ctx: ChannelHandlerContext) {
-                                        ctx.writeAndFlush(Message(localDescription, iceCandidates).toString())
+                                        ctx.writeAndFlush(WebrtcMessage(localDescription, iceCandidates).toString())
                                     }
 
                                     override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
-                                        val message = Message(msg)
-                                        peerConnection?.setRemoteDescription(SimpleSdpObserver("push-setRemoteDescription"), message.description)
-                                        message.iceCandidates.forEach { iceCandidate ->
-                                            peerConnection?.addIceCandidate(iceCandidate)
+                                        val webrtcMessage = WebrtcMessage(msg)
+                                        webrtcMessage.description?.let {
+                                            peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), it)
+                                        }
+                                        webrtcMessage.iceCandidates.forEach {
+                                            peerConnection?.addIceCandidate(it)
                                         }
                                     }
                                 })
