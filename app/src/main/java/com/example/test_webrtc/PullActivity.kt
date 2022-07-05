@@ -194,7 +194,7 @@ class PullActivity : AppCompatActivity() {
                                 })
                             }
                         })
-                        .connect("192.168.8.101", 8888).sync().channel().closeFuture().sync()
+                        .connect("192.168.8.102", 8888).sync().channel().closeFuture().sync()
             } catch (e: Exception) {
                 e.printStackTrace()
                 eventLoopGroup.shutdownGracefully()
@@ -250,7 +250,7 @@ class PullActivity : AppCompatActivity() {
                                 })
                             }
                         })
-                        .connect("192.168.8.101", 8888).sync().channel().closeFuture().sync()
+                        .connect("192.168.8.102", 8888).sync().channel().closeFuture().sync()
             } catch (e: Exception) {
                 e.printStackTrace()
                 eventLoopGroup.shutdownGracefully()
