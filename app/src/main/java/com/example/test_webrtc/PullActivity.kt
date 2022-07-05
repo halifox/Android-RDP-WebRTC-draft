@@ -2,7 +2,6 @@ package com.example.test_webrtc
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelHandlerContext
@@ -32,11 +31,7 @@ class PullActivity : AppCompatActivity() {
         setContentView(R.layout.activity_pull)
         initService()
 
-        val surfaceViewRenderer = findViewById<SurfaceViewRenderer>(R.id.srv)
-        surfaceViewRenderer.setOnTouchListener { v, event ->
 
-            return@setOnTouchListener true
-        }
     }
 
 
@@ -58,6 +53,7 @@ class PullActivity : AppCompatActivity() {
                                 pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
                                     private var peerConnection: PeerConnection? = null
 
+                                    @SuppressLint("ClickableViewAccessibility")
                                     override fun channelActive(ctx: ChannelHandlerContext?) {
                                         super.channelActive(ctx)
                                         //EglBase
@@ -83,6 +79,11 @@ class PullActivity : AppCompatActivity() {
                                         val surfaceViewRenderer = findViewById<SurfaceViewRenderer>(R.id.srv)
                                         runOnUiThread {
                                             surfaceViewRenderer.init(eglBaseContext, null)
+                                            surfaceViewRenderer.setOnTouchListener { v, event ->
+                                                val motionModel = MotionModel(event, v.width, v.height)
+                                                ctx?.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.MOVE, motionModel = motionModel).toString())
+                                                return@setOnTouchListener true
+                                            }
                                         }
 
 
@@ -109,7 +110,7 @@ class PullActivity : AppCompatActivity() {
 
                                             override fun onIceCandidate(iceCandidate: IceCandidate) {
                                                 super.onIceCandidate(iceCandidate)
-                                                ctx?.writeAndFlush(WebrtcMessage(type = "ice", iceCandidate = iceCandidate).toString())
+                                                ctx?.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.ICE, iceCandidate = iceCandidate).toString())
                                             }
                                         })
 
@@ -123,21 +124,21 @@ class PullActivity : AppCompatActivity() {
 
                                     override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
                                         val webrtcMessage = WebrtcMessage(msg)
-                                        Log.d(TAG, "channelRead0: ${msg}")
                                         when (webrtcMessage.type) {
-                                            "sdp" -> {
+                                            WebrtcMessage.Type.SDP -> {
                                                 peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), webrtcMessage.description)
                                                 peerConnection?.createAnswer(object : SimpleSdpObserver("pull-createAnswer") {
                                                     override fun onCreateSuccess(description: SessionDescription) {
                                                         peerConnection?.setLocalDescription(SimpleSdpObserver("pull-setLocalDescription"), description)
-                                                        ctx.writeAndFlush(WebrtcMessage(type = "sdp", description = description).toString())
+                                                        ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SDP, description = description).toString())
                                                     }
                                                 }, MediaConstraints())
                                             }
-                                            "ice" -> {
+                                            WebrtcMessage.Type.ICE -> {
                                                 peerConnection?.addIceCandidate(webrtcMessage.iceCandidate)
                                             }
-                                            "move" -> {}
+                                            WebrtcMessage.Type.MOVE -> {}
+                                            else -> {}
                                         }
 
 
@@ -145,7 +146,7 @@ class PullActivity : AppCompatActivity() {
                                 })
                             }
                         })
-                        .connect("192.168.8.102", 8888).sync().channel().closeFuture().sync()
+                        .connect("192.168.8.101", 8888).sync().channel().closeFuture().sync()
             } catch (e: Exception) {
                 e.printStackTrace()
                 eventLoopGroup.shutdownGracefully()

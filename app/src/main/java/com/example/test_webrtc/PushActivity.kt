@@ -6,11 +6,13 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.view.InputEvent
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
+import com.blankj.utilcode.util.ScreenUtils
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
@@ -33,10 +35,10 @@ class PushActivity : AppCompatActivity() {
 
     private val mainScope = MainScope()
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_push)
-
         initService()
         push()
         testTextView()
@@ -73,7 +75,13 @@ class PushActivity : AppCompatActivity() {
                                 pipeline.addLast(StringEncoder(CharsetUtil.UTF_8))
                                 pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
                                     private var peerConnection: PeerConnection? = null
-                                    private val iceCandidates = mutableListOf<IceCandidate>()
+
+                                    private val inputManagerClass = Class.forName("android.hardware.input.InputManager")
+                                    private val inputManagerInstance = inputManagerClass.getDeclaredMethod("getInstance")
+                                    private val inputManager = inputManagerInstance.invoke(null) as android.hardware.input.InputManager
+                                    private val injectInputEvent = inputManager.javaClass.getMethod("injectInputEvent", InputEvent::class.java, Int::class.javaPrimitiveType)
+                                    private val screenHeight = ScreenUtils.getAppScreenHeight()
+                                    private val screenWidth = ScreenUtils.getAppScreenWidth()
 
                                     override fun channelActive(ctx: ChannelHandlerContext) {
                                         //RTC配置
@@ -87,7 +95,7 @@ class PushActivity : AppCompatActivity() {
                                         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver("push") {
                                             override fun onIceCandidate(iceCandidate: IceCandidate) {
                                                 super.onIceCandidate(iceCandidate)
-                                                ctx.writeAndFlush(WebrtcMessage(type = "ice", iceCandidate = iceCandidate).toString())
+                                                ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.ICE, iceCandidate = iceCandidate).toString())
                                             }
 
                                             override fun onAddStream(mediaStream: MediaStream) {
@@ -106,7 +114,7 @@ class PushActivity : AppCompatActivity() {
                                         peerConnection?.createOffer(object : SimpleSdpObserver("push-createOffer") {
                                             override fun onCreateSuccess(description: SessionDescription) {
                                                 peerConnection?.setLocalDescription(SimpleSdpObserver("push-setLocalDescription"), description)
-                                                ctx.writeAndFlush(WebrtcMessage(type = "sdp", description = description).toString())
+                                                ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SDP, description = description).toString())
                                             }
                                         }, sdpConstraints)
                                     }
@@ -121,19 +129,29 @@ class PushActivity : AppCompatActivity() {
                                         val webrtcMessage = WebrtcMessage(msg)
 
                                         when (webrtcMessage.type) {
-                                            "sdp" -> {
+                                            WebrtcMessage.Type.SDP -> {
                                                 peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), webrtcMessage.description)
                                                 peerConnection?.createAnswer(object : SimpleSdpObserver("pull-createAnswer") {
                                                     override fun onCreateSuccess(description: SessionDescription) {
                                                         peerConnection?.setLocalDescription(SimpleSdpObserver("pull-setLocalDescription"), description)
-                                                        ctx.writeAndFlush(WebrtcMessage(type = "sdp", description = description).toString())
+                                                        ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SDP, description = description).toString())
                                                     }
                                                 }, MediaConstraints())
                                             }
-                                            "ice" -> {
+                                            WebrtcMessage.Type.ICE -> {
                                                 peerConnection?.addIceCandidate(webrtcMessage.iceCandidate)
                                             }
-                                            "move" -> {}
+                                            WebrtcMessage.Type.MOVE -> {
+                                                runCatching {
+                                                    val model = webrtcMessage.motionModel!!
+                                                    model.scaleByScreen(screenHeight, screenWidth)
+                                                    val event = model.toMotionEvent()
+                                                    injectInputEvent.invoke(inputManager, event, 0)
+                                                }.onFailure {
+                                                    it.printStackTrace()
+                                                }
+                                            }
+                                            else -> {}
                                         }
                                     }
                                 })

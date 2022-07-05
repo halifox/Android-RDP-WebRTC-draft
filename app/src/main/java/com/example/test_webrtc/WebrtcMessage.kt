@@ -5,7 +5,14 @@ import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 
 class WebrtcMessage {
-    var type: String? = null
+    enum class Type {
+        NULL,
+        SDP,
+        ICE,
+        MOVE,
+    }
+
+    var type: Type = Type.NULL
     var description: SessionDescription? = null
     var iceCandidate: IceCandidate? = null
     var motionModel: MotionModel? = null
@@ -19,7 +26,7 @@ class WebrtcMessage {
     }
 
     constructor(
-            type: String? = null,
+            type: Type,
             description: SessionDescription? = null,
             iceCandidate: IceCandidate? = null,
             motionModel: MotionModel? = null,
