@@ -111,9 +111,9 @@ class PullActivity : AppCompatActivity() {
 
                                     override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
                                         val message = Gson().fromJson(msg, Message::class.java)
-                                        peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), SessionDescription(SessionDescription.Type.OFFER, message.description?.description))
+                                        peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), message.description)
                                         message.iceCandidates.forEach { iceCandidate ->
-                                            peerConnection?.addIceCandidate(IceCandidate(iceCandidate.sdpMid, iceCandidate.sdpMLineIndex, iceCandidate.sdp))
+                                            peerConnection?.addIceCandidate(iceCandidate)
                                         }
 
                                         peerConnection?.createAnswer(object : SimpleSdpObserver("pull-createAnswer") {

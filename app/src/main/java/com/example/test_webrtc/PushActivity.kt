@@ -85,7 +85,7 @@ class PushActivity : AppCompatActivity() {
                                         val message = Message(msg)
                                         peerConnection?.setRemoteDescription(SimpleSdpObserver("push-setRemoteDescription"), message.description)
                                         message.iceCandidates.forEach { iceCandidate ->
-                                            peerConnection?.addIceCandidate(IceCandidate(iceCandidate.sdpMid, iceCandidate.sdpMLineIndex, iceCandidate.sdp))
+                                            peerConnection?.addIceCandidate(iceCandidate)
                                         }
                                     }
                                 })
@@ -201,6 +201,7 @@ class PushActivity : AppCompatActivity() {
         super.onDestroy()
         mainScope.cancel()
         peerConnection?.dispose()
+        MediaProjectionForegroundService.stop(this)
     }
 
 
