@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
@@ -24,6 +25,7 @@ import io.netty.handler.codec.string.StringEncoder
 import io.netty.util.CharsetUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
@@ -100,7 +102,14 @@ class PushActivity : AppCompatActivity() {
 
 
     private val registerMediaProjectionPermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        pushCore(it.data)
+        if (it.resultCode == RESULT_OK) {
+            pushCore(it.data)
+        } else {
+            runOnUiThread {
+                Toast.makeText(this, "Need Media Projection Permission", Toast.LENGTH_LONG).show()
+                finish()
+            }
+        }
     }
 
     private fun push() {
@@ -111,7 +120,6 @@ class PushActivity : AppCompatActivity() {
 
 
     private fun pushCore(mediaProjectionPermissionResultData: Intent?) {
-
         //EglBase
         val eglBase = EglBase.create()
         val eglBaseContext = eglBase.getEglBaseContext()
@@ -173,11 +181,10 @@ class PushActivity : AppCompatActivity() {
             }
         })
 
-        //creating local mediastream
-        val stream = peerConnectionFactory.createLocalMediaStream("102")
-        stream.addTrack(audioTrack)
-        stream.addTrack(videoTrack)
-        peerConnection?.addStream(stream)
+        val mediaStream = peerConnectionFactory.createLocalMediaStream("102")
+        mediaStream.addTrack(audioTrack)
+        mediaStream.addTrack(videoTrack)
+        peerConnection?.addStream(mediaStream)
 
         val sdpConstraints = MediaConstraints()
         sdpConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
@@ -188,8 +195,12 @@ class PushActivity : AppCompatActivity() {
                 localDescription = description
             }
         }, sdpConstraints)
+    }
 
-
+    override fun onDestroy() {
+        super.onDestroy()
+        mainScope.cancel()
+        peerConnection?.dispose()
     }
 
 
