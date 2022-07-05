@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
+import com.example.test_webrtc.srs.SrsActivity
 
 
 class MainActivity : AppCompatActivity() {
@@ -17,6 +18,9 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.btn_pull).setOnClickListener {
             startActivity(Intent(this, PullActivity::class.java))
+        }
+        findViewById<Button>(R.id.btn_srs).setOnClickListener {
+            startActivity(Intent(this, SrsActivity::class.java))
         }
     }
 }

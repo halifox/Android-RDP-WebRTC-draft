@@ -19,6 +19,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="pull" />
+    <Button
+        android:id="@+id/btn_srs"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="srs" />
 
 
 </LinearLayout>
