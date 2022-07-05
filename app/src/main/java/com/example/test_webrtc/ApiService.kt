@@ -8,7 +8,7 @@ import retrofit2.create
 import retrofit2.http.Body
 import retrofit2.http.POST
 
-var SRS_SERVER_IP = "192.168.31.234"
+var SRS_SERVER_IP = "192.168.8.220"
 
 interface ApiService {
 

@@ -3,18 +3,19 @@ package com.example.test_webrtc
 import android.content.Intent
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
+import java.time.LocalTime
 
 class MainActivity : AppCompatActivity() {
     private var webrtcUrl = "webrtc://${SRS_SERVER_IP}/live/livestream"
@@ -27,6 +28,16 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_push).setOnClickListener { push() }
         findViewById<Button>(R.id.btn_pull).setOnClickListener { pull() }
         findViewById<Button>(R.id.btn_stop).setOnClickListener { stop() }
+        val textView = findViewById<TextView>(R.id.tv_time)
+        val handler = Handler()
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    textView.text = LocalTime.now().toString()
+                }
+                handler.postDelayed(this, 16)
+            }
+        }, 16)
 
     }
 
@@ -177,7 +188,7 @@ class MainActivity : AppCompatActivity() {
         val videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast)
         val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext)
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.capturerObserver)
-        videoCapturer.startCapture(2160 / 2, 1080 / 2, 60)
+        videoCapturer.startCapture(2160, 1080, 60)
         val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
 
 /*
