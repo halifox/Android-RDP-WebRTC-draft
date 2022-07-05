@@ -1,13 +1,11 @@
 package com.example.test_webrtc
 
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.google.gson.Gson
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
-import io.netty.channel.EventLoopGroup
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
@@ -27,11 +25,10 @@ import org.webrtc.audio.JavaAudioDeviceModule
 class PullActivity : AppCompatActivity() {
 
 
-    private var peerConnection: PeerConnection? = null
     private val mainScope = MainScope()
-
-    var localDescription: SessionDescription? = null
-    val iceCandidates = mutableListOf<IceCandidate>()
+    private var peerConnection: PeerConnection? = null
+    private var localDescription: SessionDescription? = null
+    private val iceCandidates = mutableListOf<IceCandidate>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,10 +73,9 @@ class PullActivity : AppCompatActivity() {
         rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
         rtcConfig.keyType = PeerConnection.KeyType.ECDSA
 
-        val peerConnectionObserver = object : PeerConnectionObserver() {
+        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver("pull") {
             override fun onAddStream(mediaStream: MediaStream) {
                 super.onAddStream(mediaStream)
-                Log.d("REC", "onAddStream: ")
                 if (mediaStream.videoTracks.isNotEmpty()) {
                     //显示
                     mediaStream.videoTracks[0].addSink(surfaceViewRenderer)
@@ -91,19 +87,17 @@ class PullActivity : AppCompatActivity() {
 
             override fun onIceCandidate(iceCandidate: IceCandidate) {
                 super.onIceCandidate(iceCandidate)
-                Log.d("REC", "iceCandidate: ${iceCandidate}")
                 iceCandidates.add(iceCandidate)
             }
-        }
-        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, peerConnectionObserver)
+        })
     }
 
     private fun initService() {
         mainScope.launch(Dispatchers.IO) {
-            val eventLoopGroup: EventLoopGroup = NioEventLoopGroup()
+            val eventLoopGroup = NioEventLoopGroup()
             try {
-                val bootstrap = Bootstrap()
-                bootstrap.group(eventLoopGroup)
+                Bootstrap()
+                        .group(eventLoopGroup)
                         .channel(NioSocketChannel::class.java)
                         .handler(object : ChannelInitializer<SocketChannel>() {
                             override fun initChannel(channel: SocketChannel) {
@@ -120,14 +114,14 @@ class PullActivity : AppCompatActivity() {
 
                                     override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
                                         val message = Gson().fromJson(msg, Message::class.java)
-                                        peerConnection?.setRemoteDescription(SdpAdapter("localSetRemote"), SessionDescription(SessionDescription.Type.OFFER, message.description?.description))
+                                        peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), SessionDescription(SessionDescription.Type.OFFER, message.description?.description))
                                         message.iceCandidates.forEach { iceCandidate ->
                                             peerConnection?.addIceCandidate(IceCandidate(iceCandidate.sdpMid, iceCandidate.sdpMLineIndex, iceCandidate.sdp))
                                         }
 
-                                        peerConnection?.createAnswer(object : SdpAdapter("2") {
+                                        peerConnection?.createAnswer(object : SimpleSdpObserver("pull-createAnswer") {
                                             override fun onCreateSuccess(description: SessionDescription) {
-                                                peerConnection?.setLocalDescription(SdpAdapter("setLocalDescription"), description)
+                                                peerConnection?.setLocalDescription(SimpleSdpObserver("pull-setLocalDescription"), description)
                                                 localDescription = description
                                             }
                                         }, MediaConstraints())
@@ -138,16 +132,15 @@ class PullActivity : AppCompatActivity() {
                                                 delay(100)
                                             }
                                             while (iceCandidates.isEmpty()) {
-                                                delay(2000)
+                                                delay(100)
                                             }
-                                            ctx.writeAndFlush(Gson().toJson(Message(localDescription, iceCandidates)))
+                                            ctx.writeAndFlush(Message(localDescription, iceCandidates).toString())
                                         }
                                     }
                                 })
                             }
                         })
-                val channelFuture = bootstrap.connect("192.168.8.101", 8888).sync()
-                channelFuture.channel().closeFuture().sync()
+                        .connect("192.168.8.101", 8888).sync().channel().closeFuture().sync()
             } catch (e: Exception) {
                 e.printStackTrace()
                 eventLoopGroup.shutdownGracefully()
@@ -156,4 +149,7 @@ class PullActivity : AppCompatActivity() {
         }
     }
 
+    companion object {
+        private const val TAG = "PullActivity"
+    }
 }

@@ -10,7 +10,6 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
-import com.google.gson.Gson
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
@@ -32,13 +31,10 @@ import java.time.LocalTime
 
 class PushActivity : AppCompatActivity() {
 
-    val bossGroup = NioEventLoopGroup()
-    val workerGroup = NioEventLoopGroup()
-    val serverBootstrap = ServerBootstrap()
-
-    var localDescription: SessionDescription? = null
-    val iceCandidates = mutableListOf<IceCandidate>()
-    var peerConnection: PeerConnection? = null
+    private var peerConnection: PeerConnection? = null
+    private var localDescription: SessionDescription? = null
+    private val iceCandidates = mutableListOf<IceCandidate>()
+    private val mainScope = MainScope()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,7 +42,10 @@ class PushActivity : AppCompatActivity() {
 
         initService()
         push()
+        testTextView()
+    }
 
+    private fun testTextView() {
         val textView = findViewById<TextView>(R.id.tv_time)
         val handler = Handler()
         handler.postDelayed(object : Runnable {
@@ -57,14 +56,16 @@ class PushActivity : AppCompatActivity() {
                 handler.postDelayed(this, 16)
             }
         }, 16)
-
     }
 
     private fun initService() {
         mainScope.launch(Dispatchers.IO) {
+            val bossGroup = NioEventLoopGroup()
+            val workerGroup = NioEventLoopGroup()
             try {
-                serverBootstrap.group(bossGroup, workerGroup) //设置nio双向通道
-                        .channel(NioServerSocketChannel::class.java) //子处理器
+                ServerBootstrap()
+                        .group(bossGroup, workerGroup)
+                        .channel(NioServerSocketChannel::class.java)
                         .childHandler(object : ChannelInitializer<SocketChannel>() {
                             override fun initChannel(channel: SocketChannel) {
                                 val pipeline = channel.pipeline()
@@ -75,22 +76,19 @@ class PushActivity : AppCompatActivity() {
                                 pipeline.addLast(StringEncoder(CharsetUtil.UTF_8))
                                 pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
                                     override fun channelActive(ctx: ChannelHandlerContext) {
-                                        super.channelActive(ctx)
-                                        ctx.writeAndFlush(Gson().toJson(Message(localDescription, iceCandidates)))
+                                        ctx.writeAndFlush(Message(localDescription, iceCandidates).toString())
                                     }
 
                                     override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
-                                        val message = Gson().fromJson(msg, Message::class.java)
-                                        peerConnection?.setRemoteDescription(SdpAdapter(""), message.description)
+                                        val message = Message(msg)
+                                        peerConnection?.setRemoteDescription(SimpleSdpObserver("push-setRemoteDescription"), message.description)
                                         message.iceCandidates.forEach { iceCandidate ->
                                             peerConnection?.addIceCandidate(IceCandidate(iceCandidate.sdpMid, iceCandidate.sdpMLineIndex, iceCandidate.sdp))
                                         }
                                     }
                                 })
                             }
-                        })
-                val channelFuture = serverBootstrap.bind(8888).sync()
-                channelFuture.channel().closeFuture().sync()
+                        }).bind(8888).sync().channel().closeFuture().sync()
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -100,7 +98,6 @@ class PushActivity : AppCompatActivity() {
         }
     }
 
-    private val mainScope = MainScope()
 
     private val registerMediaProjectionPermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         pushCore(it.data)
@@ -165,10 +162,14 @@ class PushActivity : AppCompatActivity() {
         rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
         rtcConfig.keyType = PeerConnection.KeyType.ECDSA
         //创建对等连接
-        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : PeerConnectionObserver() {
+        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver("push") {
             override fun onIceCandidate(iceCandidate: IceCandidate) {
                 super.onIceCandidate(iceCandidate)
                 iceCandidates.add(iceCandidate)
+            }
+
+            override fun onAddStream(mediaStream: MediaStream) {
+                super.onAddStream(mediaStream)
             }
         })
 
@@ -181,9 +182,9 @@ class PushActivity : AppCompatActivity() {
         val sdpConstraints = MediaConstraints()
         sdpConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
         sdpConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
-        peerConnection?.createOffer(object : SdpAdapter("createOffer") {
+        peerConnection?.createOffer(object : SimpleSdpObserver("push-createOffer") {
             override fun onCreateSuccess(description: SessionDescription) {
-                peerConnection?.setLocalDescription(SdpAdapter("setLocalDescription"), description)
+                peerConnection?.setLocalDescription(SimpleSdpObserver("push-setLocalDescription"), description)
                 localDescription = description
             }
         }, sdpConstraints)
