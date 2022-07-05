@@ -7,18 +7,21 @@ import org.webrtc.SessionDescription
 
 open class SdpAdapter constructor(private val tag: String) : SdpObserver {
 
-    override fun onSetFailure(str: String?) {
-        Log.d("TAG", "onSetFailure: ${str}")
+    override fun onSetFailure(str: String) {
+        Log.d(tag, "onSetFailure: ${str}")
     }
 
     override fun onSetSuccess() {
+        Log.d(tag, "onSetSuccess: ${null}")
+
     }
 
-    override fun onCreateSuccess(description: SessionDescription?) {
+    override fun onCreateSuccess(description: SessionDescription) {
+        Log.d(tag, "onCreateSuccess: ${description}")
+
     }
 
-    override fun onCreateFailure(s: String?) {
-        Log.d("TAG", "onCreateFailure:${tag} ${s}")
-
+    override fun onCreateFailure(str: String) {
+        Log.d(tag, "onCreateFailure: ${str}")
     }
 }

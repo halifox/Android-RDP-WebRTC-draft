@@ -1,16 +1,14 @@
 package com.example.test_webrtc;
 
-import com.squareup.moshi.JsonClass
 import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 
-@JsonClass(generateAdapter = true)
 class Message {
-    var d: SessionDescription? = null
-    var i: MutableList<IceCandidate> = mutableListOf<IceCandidate>()
+    var description: SessionDescription? = null
+    var iceCandidates: List<IceCandidate> = emptyList()
 
-    constructor(d: SessionDescription?, i: MutableList<IceCandidate>) {
-        this.d = d
-        this.i = i
+    constructor(description: SessionDescription?, iceCandidates: List<IceCandidate>) {
+        this.description = description
+        this.iceCandidates = iceCandidates
     }
 }
