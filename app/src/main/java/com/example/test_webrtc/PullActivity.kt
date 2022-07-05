@@ -84,6 +84,7 @@ class PullActivity : AppCompatActivity() {
                 }
                 if (mediaStream.audioTracks.isNotEmpty()) {
 
+                    mediaStream.audioTracks[0]
                 }
             }
 
@@ -135,6 +136,7 @@ class PullActivity : AppCompatActivity() {
                 }
                 if (mediaStream.audioTracks.isNotEmpty()) {
 
+                    mediaStream.audioTracks[0]
                 }
             }
 

@@ -37,6 +37,18 @@ class SrsActivity : AppCompatActivity() {
         suspend fun publish(@Body body: SrsRequestBean): SrsResponseBean
     }
 
+    data class SrsRequestBean(
+            val sdp: String?,
+            val streamurl: String?
+    )
+
+    data class SrsResponseBean(
+            val code: Int,
+            val sdp: String?,
+            val server: String?,
+            val sessionid: String?
+    )
+
     private var SRS_SERVER_IP = "192.168.8.100"
     private val baseUrl = "http://$SRS_SERVER_IP:${1985}/"
     private var webrtcUrl = "webrtc://${SRS_SERVER_IP}/live/livestream"
