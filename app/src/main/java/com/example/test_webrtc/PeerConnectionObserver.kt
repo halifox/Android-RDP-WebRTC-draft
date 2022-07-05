@@ -19,7 +19,7 @@ open class PeerConnectionObserver : PeerConnection.Observer {
 
     }
 
-    override fun onIceCandidate(p0: IceCandidate?) {
+    override fun onIceCandidate(iceCandidate: IceCandidate) {
 
     }
 

@@ -6,21 +6,42 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
+import com.google.gson.Gson
+import io.netty.bootstrap.Bootstrap
+import io.netty.bootstrap.ServerBootstrap
+import io.netty.channel.ChannelHandlerContext
+import io.netty.channel.ChannelInitializer
+import io.netty.channel.EventLoopGroup
+import io.netty.channel.SimpleChannelInboundHandler
+import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.socket.SocketChannel
+import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.channel.socket.nio.NioSocketChannel
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder
+import io.netty.handler.codec.LengthFieldPrepender
+import io.netty.handler.codec.string.StringDecoder
+import io.netty.handler.codec.string.StringEncoder
+import io.netty.util.CharsetUtil
 import kotlinx.coroutines.*
 import org.webrtc.*
+import org.webrtc.MediaConstraints.KeyValuePair
 import org.webrtc.audio.JavaAudioDeviceModule
 import java.time.LocalTime
 
+
 class MainActivity : AppCompatActivity() {
-    private var webrtcUrl = "webrtc://${SRS_SERVER_IP}/live/livestream"
+    //    private var webrtcUrl = "webrtc://${SRS_SERVER_IP}/live/livestream"
     private var peerConnection: PeerConnection? = null
     private val mainScope = MainScope()
+
+    var d: SessionDescription? = null
+    val i = mutableListOf<IceCandidate>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +90,78 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun pullCore() {
+        mainScope.launch(Dispatchers.IO) {
+            val eventLoopGroup: EventLoopGroup = NioEventLoopGroup()
+            try {
+                val bootstrap = Bootstrap()
+                bootstrap.group(eventLoopGroup)
+                        .channel(NioSocketChannel::class.java)
+                        .handler(object : ChannelInitializer<SocketChannel>() {
+                            override fun initChannel(channel: SocketChannel) {
+                                val pipeline = channel.pipeline()
+                                //数据分包，组包，粘包
+                                pipeline.addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
+                                pipeline.addLast(LengthFieldPrepender(4))
+                                pipeline.addLast(StringDecoder(CharsetUtil.UTF_8))
+                                pipeline.addLast(StringEncoder(CharsetUtil.UTF_8))
+                                pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
+                                    override fun channelActive(ctx: ChannelHandlerContext?) {
+                                        super.channelActive(ctx)
+                                    }
+
+                                    override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
+                                        val message = Gson().fromJson(msg, Message::class.java)
+                                        peerConnection?.setRemoteDescription(SdpAdapter("localSetRemote"), SessionDescription(SessionDescription.Type.OFFER, message.d?.description))
+                                        message.i.forEach { iceCandidate ->
+                                            peerConnection?.addIceCandidate(IceCandidate(iceCandidate.sdpMid, iceCandidate.sdpMLineIndex, iceCandidate.sdp))
+                                        }
+
+                                        peerConnection?.createAnswer(object : SdpObserver {
+                                            override fun onCreateSuccess(description: SessionDescription) {
+                                                Log.d("REC", "description: ${description}")
+
+                                                peerConnection?.setLocalDescription(SdpAdapter("setLocalDescription"), description)
+                                                d = description
+                                            }
+
+                                            override fun onSetSuccess() {
+                                                Log.d("REC", "onSetSuccess: ")
+
+                                            }
+
+                                            override fun onCreateFailure(p0: String?) {
+                                                Log.d("REC", "onCreateFailure: ${p0}")
+                                            }
+
+                                            override fun onSetFailure(p0: String?) {
+                                                Log.d("REC", "onSetFailure: ${p0}")
+
+                                            }
+                                        }, MediaConstraints())
+
+
+                                        mainScope.launch {
+                                            while (d == null) {
+                                                delay(100)
+                                            }
+                                            while (i.isEmpty()) {
+                                                delay(2000)
+                                            }
+                                            ctx.writeAndFlush(Gson().toJson(Message(d, i)))
+                                        }
+                                    }
+                                })
+                            }
+                        })
+                val channelFuture = bootstrap.connect("192.168.8.101", 8888).sync()
+                channelFuture.channel().closeFuture().sync()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                eventLoopGroup.shutdownGracefully()
+            }
+
+        }
+
         //EglBase
         val eglBase = EglBase.create()
         val eglBaseContext = eglBase.getEglBaseContext()
@@ -93,10 +186,16 @@ class MainActivity : AppCompatActivity() {
         surfaceViewRenderer.init(eglBaseContext, null)
 
         val rtcConfig = PeerConnection.RTCConfiguration(emptyList())
-        rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
+        rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
+        rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
+        rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
+        rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
+        rtcConfig.keyType = PeerConnection.KeyType.ECDSA
+
         val peerConnectionObserver = object : PeerConnectionObserver() {
             override fun onAddStream(mediaStream: MediaStream) {
                 super.onAddStream(mediaStream)
+                Log.d("REC", "onAddStream: ")
                 if (mediaStream.videoTracks.isNotEmpty()) {
                     //显示
                     mediaStream.videoTracks[0].addSink(surfaceViewRenderer)
@@ -105,50 +204,58 @@ class MainActivity : AppCompatActivity() {
 
                 }
             }
+
+            override fun onIceCandidate(iceCandidate: IceCandidate) {
+                super.onIceCandidate(iceCandidate)
+                Log.d("REC", "iceCandidate: ${iceCandidate}")
+                i.add(iceCandidate)
+            }
         }
         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, peerConnectionObserver)
-        peerConnection?.addTransceiver(MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO, RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY))
-        peerConnection?.addTransceiver(MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO, RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY))
-        peerConnection?.createOffer(object : SdpObserver {
-            override fun onCreateSuccess(description: SessionDescription) {
-                if (description.type == SessionDescription.Type.OFFER) {
-                    val offerSdp = description.description
-                    peerConnection?.setLocalDescription(SdpAdapter("setLocalDescription"), description)
-                    val srsBean = SrsRequestBean(description.description, webrtcUrl)
-                    mainScope.launch(Dispatchers.IO) {
-                        try {
-                            val result = apiService.play(srsBean)
-                            if (result.code == 0) {
-                                val remoteSdp = SessionDescription(SessionDescription.Type.ANSWER, convertAnswerSdp(offerSdp, result.sdp))
-                                peerConnection?.setRemoteDescription(SdpAdapter("setRemoteDescription"), remoteSdp)
-                            } else {
-                                launch(Dispatchers.Main) {
-                                    Toast.makeText(this@MainActivity, "网络请求失败，code：${result.code}", Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
-
-            }
-
-            override fun onSetSuccess() {
-
-            }
-
-            override fun onCreateFailure(p0: String?) {
-
-            }
-
-            override fun onSetFailure(p0: String?) {
-
-            }
-        }, MediaConstraints())
     }
 
     private fun pushCore(mediaProjectionPermissionResultData: Intent?) {
+        mainScope.launch(Dispatchers.IO) {
+            val bossGroup = NioEventLoopGroup()
+            val workerGroup = NioEventLoopGroup()
+            val serverBootstrap = ServerBootstrap()
+            try {
+                serverBootstrap.group(bossGroup, workerGroup) //设置nio双向通道
+                        .channel(NioServerSocketChannel::class.java) //子处理器
+                        .childHandler(object : ChannelInitializer<SocketChannel>() {
+                            override fun initChannel(channel: SocketChannel) {
+                                val pipeline = channel.pipeline()
+                                //数据分包，组包，粘包
+                                pipeline.addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
+                                pipeline.addLast(LengthFieldPrepender(4))
+                                pipeline.addLast(StringDecoder(CharsetUtil.UTF_8))
+                                pipeline.addLast(StringEncoder(CharsetUtil.UTF_8))
+                                pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
+                                    override fun channelActive(ctx: ChannelHandlerContext) {
+                                        super.channelActive(ctx)
+                                        ctx.writeAndFlush(Gson().toJson(Message(d, i)))
+                                    }
+
+                                    override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
+                                        val message = Gson().fromJson(msg, Message::class.java)
+                                        peerConnection?.setRemoteDescription(SdpAdapter(""), message.d)
+                                        message.i.forEach { iceCandidate ->
+                                            peerConnection?.addIceCandidate(IceCandidate(iceCandidate.sdpMid, iceCandidate.sdpMLineIndex, iceCandidate.sdp))
+                                        }
+                                    }
+                                })
+                            }
+                        })
+                val channelFuture = serverBootstrap.bind(8888).sync()
+                channelFuture.channel().closeFuture().sync()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                bossGroup.shutdownGracefully()
+                workerGroup.shutdownGracefully()
+            }
+        }
+
         //EglBase
         val eglBase = EglBase.create()
         val eglBaseContext = eglBase.getEglBaseContext()
@@ -170,13 +277,13 @@ class MainActivity : AppCompatActivity() {
         //音频处理
         val audioConstraints = MediaConstraints()
         //回声消除
-        audioConstraints.mandatory.add(MediaConstraints.KeyValuePair("googEchoCancellation", "true"))
+        audioConstraints.mandatory.add(KeyValuePair("googEchoCancellation", "true"))
         //自动增益
-        audioConstraints.mandatory.add(MediaConstraints.KeyValuePair("googAutoGainControl", "true"))
+        audioConstraints.mandatory.add(KeyValuePair("googAutoGainControl", "true"))
         //高音过滤
-        audioConstraints.mandatory.add(MediaConstraints.KeyValuePair("googHighpassFilter", "true"))
+        audioConstraints.mandatory.add(KeyValuePair("googHighpassFilter", "true"))
         //噪音处理
-        audioConstraints.mandatory.add(MediaConstraints.KeyValuePair("googNoiseSuppression", "true"))
+        audioConstraints.mandatory.add(KeyValuePair("googNoiseSuppression", "true"))
         //创建音频源
         val audioSource = peerConnectionFactory.createAudioSource(audioConstraints)
         //创建音轨
@@ -191,43 +298,34 @@ class MainActivity : AppCompatActivity() {
         videoCapturer.startCapture(2160, 1080, 60)
         val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
 
-/*
-        //显示
-        val surfaceViewRenderer = findViewById<SurfaceViewRenderer>(R.id.srv)
-        surfaceViewRenderer.init(eglBaseContext, null)
-        videoTrack.addSink(surfaceViewRenderer)
-*/
-
         //RTC配置
         val rtcConfig = PeerConnection.RTCConfiguration(listOf())
-        rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
+        rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
+        rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
+        rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
+        rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
+        rtcConfig.keyType = PeerConnection.KeyType.ECDSA
         //创建对等连接
-        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, PeerConnectionObserver())
-        peerConnection?.addTransceiver(videoTrack, RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.SEND_ONLY))
-        peerConnection?.addTransceiver(audioTrack, RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.SEND_ONLY))
+        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : PeerConnectionObserver() {
+            override fun onIceCandidate(iceCandidate: IceCandidate) {
+                super.onIceCandidate(iceCandidate)
+                i.add(iceCandidate)
+            }
+        })
+
+        //creating local mediastream
+        val stream = peerConnectionFactory.createLocalMediaStream("102")
+        stream.addTrack(audioTrack)
+        stream.addTrack(videoTrack)
+        peerConnection?.addStream(stream)
+
+        val sdpConstraints = MediaConstraints()
+        sdpConstraints.mandatory.add(KeyValuePair("OfferToReceiveAudio", "true"))
+        sdpConstraints.mandatory.add(KeyValuePair("OfferToReceiveVideo", "true"))
         peerConnection?.createOffer(object : SdpObserver {
             override fun onCreateSuccess(description: SessionDescription) {
-                if (description.type == SessionDescription.Type.OFFER) {
-                    peerConnection?.setLocalDescription(SdpAdapter("setLocalDescription"), description)
-                    //这个offerSdp将用于向SRS服务进行网络请求
-                    val offerSdp = description.description
-                    val srsBean = SrsRequestBean(offerSdp, webrtcUrl)
-                    mainScope.launch(Dispatchers.IO) {
-                        try {
-                            val result = apiService.publish(srsBean)
-                            if (result.code == 0) {
-                                val remoteSdp = SessionDescription(SessionDescription.Type.ANSWER, convertAnswerSdp(offerSdp, result.sdp))
-                                peerConnection?.setRemoteDescription(SdpAdapter("setRemoteDescription"), remoteSdp)
-                            } else {
-                                launch(Dispatchers.Main) {
-                                    Toast.makeText(this@MainActivity, "网络请求失败，code：${result.code}", Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
+                peerConnection?.setLocalDescription(SdpAdapter("setLocalDescription"), description)
+                d = description
             }
 
             override fun onSetSuccess() {
@@ -235,44 +333,13 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onCreateFailure(p0: String?) {
-
             }
 
             override fun onSetFailure(p0: String?) {
-
             }
-        }, MediaConstraints())
-    }
+        }, sdpConstraints)
 
-    //sdp
-    private fun convertAnswerSdp(offerSdp: String, answerSdp: String?): String {
-        if (answerSdp.isNullOrBlank()) {
-            return ""
-        }
-        val indexOfOfferVideo = offerSdp.indexOf("m=video")
-        val indexOfOfferAudio = offerSdp.indexOf("m=audio")
-        if (indexOfOfferVideo == -1 || indexOfOfferAudio == -1) {
-            return answerSdp
-        }
-        val indexOfAnswerVideo = answerSdp.indexOf("m=video")
-        val indexOfAnswerAudio = answerSdp.indexOf("m=audio")
-        if (indexOfAnswerVideo == -1 || indexOfAnswerAudio == -1) {
-            return answerSdp
-        }
 
-        val isFirstOfferVideo = indexOfOfferVideo < indexOfOfferAudio
-        val isFirstAnswerVideo = indexOfAnswerVideo < indexOfAnswerAudio
-        return if (isFirstOfferVideo == isFirstAnswerVideo) {
-            //顺序一致
-            answerSdp
-        } else {
-            //需要调换顺序
-            buildString {
-                append(answerSdp.substring(0, indexOfAnswerVideo.coerceAtMost(indexOfAnswerAudio)))
-                append(answerSdp.substring(indexOfAnswerVideo.coerceAtLeast(indexOfOfferVideo), answerSdp.length))
-                append(answerSdp.substring(indexOfAnswerVideo.coerceAtMost(indexOfAnswerAudio), indexOfAnswerVideo.coerceAtLeast(indexOfOfferVideo)))
-            }
-        }
     }
 
 
