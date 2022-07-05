@@ -73,7 +73,6 @@ class PushActivity : AppCompatActivity() {
                                 pipeline.addLast(StringEncoder(CharsetUtil.UTF_8))
                                 pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
                                     private var peerConnection: PeerConnection? = null
-                                    private var localDescription: SessionDescription? = null
                                     private val iceCandidates = mutableListOf<IceCandidate>()
 
                                     override fun channelActive(ctx: ChannelHandlerContext) {
@@ -88,7 +87,7 @@ class PushActivity : AppCompatActivity() {
                                         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver("push") {
                                             override fun onIceCandidate(iceCandidate: IceCandidate) {
                                                 super.onIceCandidate(iceCandidate)
-                                                iceCandidates.add(iceCandidate)
+                                                ctx.writeAndFlush(WebrtcMessage(type = "ice", iceCandidate = iceCandidate).toString())
                                             }
 
                                             override fun onAddStream(mediaStream: MediaStream) {
@@ -107,15 +106,9 @@ class PushActivity : AppCompatActivity() {
                                         peerConnection?.createOffer(object : SimpleSdpObserver("push-createOffer") {
                                             override fun onCreateSuccess(description: SessionDescription) {
                                                 peerConnection?.setLocalDescription(SimpleSdpObserver("push-setLocalDescription"), description)
-                                                localDescription = description
+                                                ctx.writeAndFlush(WebrtcMessage(type = "sdp", description = description).toString())
                                             }
                                         }, sdpConstraints)
-                                        mainScope.launch {
-                                            while (localDescription == null && iceCandidates.isEmpty()) {
-                                                delay(100)
-                                            }
-                                            ctx.writeAndFlush(WebrtcMessage(localDescription, iceCandidates).toString())
-                                        }
                                     }
 
                                     override fun channelInactive(ctx: ChannelHandlerContext?) {
@@ -126,11 +119,21 @@ class PushActivity : AppCompatActivity() {
 
                                     override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
                                         val webrtcMessage = WebrtcMessage(msg)
-                                        webrtcMessage.description?.let {
-                                            peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), it)
-                                        }
-                                        webrtcMessage.iceCandidates.forEach {
-                                            peerConnection?.addIceCandidate(it)
+
+                                        when (webrtcMessage.type) {
+                                            "sdp" -> {
+                                                peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), webrtcMessage.description)
+                                                peerConnection?.createAnswer(object : SimpleSdpObserver("pull-createAnswer") {
+                                                    override fun onCreateSuccess(description: SessionDescription) {
+                                                        peerConnection?.setLocalDescription(SimpleSdpObserver("pull-setLocalDescription"), description)
+                                                        ctx.writeAndFlush(WebrtcMessage(type = "sdp", description = description).toString())
+                                                    }
+                                                }, MediaConstraints())
+                                            }
+                                            "ice" -> {
+                                                peerConnection?.addIceCandidate(webrtcMessage.iceCandidate)
+                                            }
+                                            "move" -> {}
                                         }
                                     }
                                 })

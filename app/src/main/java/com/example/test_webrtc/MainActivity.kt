@@ -19,6 +19,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_pull).setOnClickListener {
             startActivity(Intent(this, PullActivity::class.java))
         }
+        findViewById<Button>(R.id.btn_pull_more).setOnClickListener {
+            startActivity(Intent(this, PullMoreActivity::class.java))
+        }
         findViewById<Button>(R.id.btn_srs).setOnClickListener {
             startActivity(Intent(this, SrsActivity::class.java))
         }

@@ -5,18 +5,29 @@ import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 
 class WebrtcMessage {
+    var type: String? = null
     var description: SessionDescription? = null
-    var iceCandidates: List<IceCandidate> = emptyList()
+    var iceCandidate: IceCandidate? = null
+    var motionModel: MotionModel? = null
 
     constructor(json: String) {
         val webrtcMessage = Gson().fromJson(json, WebrtcMessage::class.java)
+        this.type = webrtcMessage.type
         this.description = webrtcMessage.description
-        this.iceCandidates = webrtcMessage.iceCandidates
+        this.iceCandidate = webrtcMessage.iceCandidate
+        this.motionModel = webrtcMessage.motionModel
     }
 
-    constructor(description: SessionDescription?, iceCandidates: List<IceCandidate>) {
+    constructor(
+            type: String? = null,
+            description: SessionDescription? = null,
+            iceCandidate: IceCandidate? = null,
+            motionModel: MotionModel? = null,
+    ) {
+        this.type = type
         this.description = description
-        this.iceCandidates = iceCandidates
+        this.iceCandidate = iceCandidate
+        this.motionModel = motionModel
     }
 
     override fun toString(): String {

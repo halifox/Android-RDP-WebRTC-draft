@@ -26,7 +26,7 @@
             android:name=".srs.SrsActivity"
             android:exported="false" />
         <activity
-            android:name=".PullActivity"
+            android:name=".PullMoreActivity"
             android:exported="false" />
         <activity
             android:name=".PushActivity"
@@ -40,6 +40,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".PullActivity" />
 
         <service
             android:name=".MediaProjectionForegroundService"

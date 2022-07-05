@@ -19,6 +19,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="pull" />
+
+    <Button
+        android:id="@+id/btn_pull_more"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="pull more" />
+
     <Button
         android:id="@+id/btn_srs"
         android:layout_width="wrap_content"
