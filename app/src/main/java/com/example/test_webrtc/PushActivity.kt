@@ -144,6 +144,10 @@ class PushActivity : AppCompatActivity() {
                                             WebrtcMessage.Type.MOVE -> {
                                                 runCatching {
                                                     val model = webrtcMessage.motionModel!!
+                                                    //TODO
+                                                    model.deviceId = 4
+                                                    model.eventTime -= 58340799
+                                                    model.downTime -= 58340799
                                                     model.scaleByScreen(screenHeight, screenWidth)
                                                     val event = model.toMotionEvent()
                                                     injectInputEvent.invoke(inputManager, event, 0)
@@ -227,10 +231,8 @@ class PushActivity : AppCompatActivity() {
         val videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast)
         val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext)
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.capturerObserver)
-        videoCapturer.startCapture(2160, 1080, 60)
+        videoCapturer.startCapture(ScreenUtils.getAppScreenWidth(), ScreenUtils.getAppScreenHeight(), 60)
         videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
-
-
     }
 
     override fun onDestroy() {

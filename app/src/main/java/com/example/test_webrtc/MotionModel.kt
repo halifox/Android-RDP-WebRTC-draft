@@ -11,9 +11,9 @@ class MotionModel : Serializable {
     private var metaState = 0
     private var flags = 0
     private var edgeFlags = 0
-    private var downTime = 0L
-    private var eventTime = 0L
-    private var deviceId = 0
+    var downTime = 0L
+    var eventTime = 0L
+    var deviceId = 0
     private var source = 0
     private var xPrecision = 0f
     private var yPrecision = 0f
