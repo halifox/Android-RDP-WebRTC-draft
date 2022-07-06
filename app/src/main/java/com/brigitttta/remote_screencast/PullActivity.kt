@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.updateLayoutParams
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
@@ -70,6 +72,7 @@ class PullActivity : AppCompatActivity() {
                                 pipeline.addLast(StringEncoder(CharsetUtil.UTF_8))
                                 pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
                                     private var peerConnection: PeerConnection? = null
+                                    private val surfaceViewRenderer = findViewById<SurfaceViewRenderer>(R.id.srv)
 
                                     @SuppressLint("ClickableViewAccessibility")
                                     override fun channelActive(ctx: ChannelHandlerContext?) {
@@ -94,7 +97,6 @@ class PullActivity : AppCompatActivity() {
                                                 .setAudioDeviceModule(audioDeviceModule)
                                                 .createPeerConnectionFactory()
 
-                                        val surfaceViewRenderer = findViewById<SurfaceViewRenderer>(R.id.srv)
                                         runOnUiThread {
                                             surfaceViewRenderer.init(eglBaseContext, null)
                                             surfaceViewRenderer.setOnTouchListener { v, event ->
@@ -155,7 +157,16 @@ class PullActivity : AppCompatActivity() {
                                             WebrtcMessage.Type.ICE -> {
                                                 peerConnection?.addIceCandidate(webrtcMessage.iceCandidate)
                                             }
-                                            WebrtcMessage.Type.MOVE -> {}
+                                            WebrtcMessage.Type.MOVE -> {
+
+                                            }
+                                            WebrtcMessage.Type.SIZE -> {
+                                                runOnUiThread {
+                                                    surfaceViewRenderer.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                                                        dimensionRatio = "${webrtcMessage.size?.width}:${webrtcMessage.size?.height}"
+                                                    }
+                                                }
+                                            }
                                             else -> {}
                                         }
 
@@ -164,7 +175,7 @@ class PullActivity : AppCompatActivity() {
                                 })
                             }
                         })
-                        .connect("192.168.8.102", 8888).sync().channel().closeFuture().sync()
+                        .connect("192.168.8.101", 8888).sync().channel().closeFuture().sync()
             } catch (e: Exception) {
                 e.printStackTrace()
                 eventLoopGroup.shutdownGracefully()

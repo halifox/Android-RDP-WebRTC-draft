@@ -7,7 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.SystemClock
-import android.util.Log
+import android.util.Size
 import android.view.InputEvent
 import android.view.MotionEvent
 import android.widget.TextView
@@ -32,7 +32,6 @@ import kotlinx.coroutines.*
 import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
 import java.time.LocalTime
-import java.util.*
 
 class PushActivity : AppCompatActivity() {
 
@@ -88,6 +87,9 @@ class PushActivity : AppCompatActivity() {
                                     private val screenWidth = ScreenUtils.getAppScreenWidth()
                                     private var downTime = 0L
                                     override fun channelActive(ctx: ChannelHandlerContext) {
+                                        //发送设备尺寸
+                                        ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SIZE, size = Size(screenWidth, screenHeight)).toString())
+
                                         //RTC配置
                                         val rtcConfig = PeerConnection.RTCConfiguration(listOf())
                                         rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
