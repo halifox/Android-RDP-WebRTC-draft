@@ -6,7 +6,10 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.SystemClock
+import android.util.Log
 import android.view.InputEvent
+import android.view.MotionEvent
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,6 +32,7 @@ import kotlinx.coroutines.*
 import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
 import java.time.LocalTime
+import java.util.*
 
 class PushActivity : AppCompatActivity() {
 
@@ -82,7 +86,7 @@ class PushActivity : AppCompatActivity() {
                                     private val injectInputEvent = inputManager.javaClass.getMethod("injectInputEvent", InputEvent::class.java, Int::class.javaPrimitiveType)
                                     private val screenHeight = ScreenUtils.getAppScreenHeight()
                                     private val screenWidth = ScreenUtils.getAppScreenWidth()
-
+                                    private var downTime = 0L
                                     override fun channelActive(ctx: ChannelHandlerContext) {
                                         //RTC配置
                                         val rtcConfig = PeerConnection.RTCConfiguration(listOf())
@@ -144,10 +148,13 @@ class PushActivity : AppCompatActivity() {
                                             WebrtcMessage.Type.MOVE -> {
                                                 runCatching {
                                                     val model = webrtcMessage.motionModel!!
-                                                    //TODO
-                                                    model.deviceId = 4
-                                                    model.eventTime -= 58340799
-                                                    model.downTime -= 58340799
+                                                    // 处理时钟差异导致的ANR
+                                                    val now = SystemClock.uptimeMillis()
+                                                    if (model.action == MotionEvent.ACTION_DOWN) {
+                                                        downTime = now
+                                                    }
+                                                    model.eventTime = now
+                                                    model.downTime = downTime
                                                     model.scaleByScreen(screenHeight, screenWidth)
                                                     val event = model.toMotionEvent()
                                                     injectInputEvent.invoke(inputManager, event, 0)

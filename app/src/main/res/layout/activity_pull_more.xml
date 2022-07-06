@@ -6,15 +6,48 @@
     android:orientation="vertical"
     tools:context=".PullMoreActivity">
 
-    <org.webrtc.SurfaceViewRenderer
-        android:id="@+id/srv1"
+    <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:orientation="horizontal">
 
-    <org.webrtc.SurfaceViewRenderer
-        android:id="@+id/srv2"
+        <org.webrtc.SurfaceViewRenderer
+            android:id="@+id/srv1"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="4dp"
+            android:layout_weight="1" />
+
+        <org.webrtc.SurfaceViewRenderer
+            android:id="@+id/srv2"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+
+            android:layout_margin="4dp"
+            android:layout_weight="1" />
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <org.webrtc.SurfaceViewRenderer
+            android:id="@+id/srv3"
+            android:layout_width="0dp"
+
+            android:layout_height="match_parent"
+            android:layout_margin="4dp"
+            android:layout_weight="1" />
+
+        <org.webrtc.SurfaceViewRenderer
+            android:id="@+id/srv4"
+            android:layout_width="0dp"
+
+            android:layout_height="match_parent"
+            android:layout_margin="4dp"
+            android:layout_weight="1" />
+    </androidx.appcompat.widget.LinearLayoutCompat>
 </LinearLayout>

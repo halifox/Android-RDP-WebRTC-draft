@@ -5,22 +5,22 @@ import java.io.Serializable
 
 class MotionModel : Serializable {
 
-    private var action = 0
-    private var pointerCount = 0
-    private var buttonState = 0
-    private var metaState = 0
-    private var flags = 0
-    private var edgeFlags = 0
+    var action = 0
+    var pointerCount = 0
+    var buttonState = 0
+    var metaState = 0
+    var flags = 0
+    var edgeFlags = 0
     var downTime = 0L
     var eventTime = 0L
     var deviceId = 0
-    private var source = 0
-    private var xPrecision = 0f
-    private var yPrecision = 0f
-    private var pointerProperties = mutableListOf<PointerProperties>()
-    private var pointerCoords = mutableListOf<PointerCoords>()
-    private var remoteHeight = 0
-    private var remoteWidth = 0
+    var source = 0
+    var xPrecision = 0f
+    var yPrecision = 0f
+    var pointerProperties = mutableListOf<PointerProperties>()
+    var pointerCoords = mutableListOf<PointerCoords>()
+    var remoteHeight = 0
+    var remoteWidth = 0
 
     private fun getPointerProperties(): Array<MotionEvent.PointerProperties> {
         return pointerProperties.map {
