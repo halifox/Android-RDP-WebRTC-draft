@@ -1,4 +1,4 @@
-package com.example.test_webrtc
+package com.brigitttta.remote_screencast
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

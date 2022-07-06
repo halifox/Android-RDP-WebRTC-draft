@@ -1,10 +1,10 @@
-package com.example.test_webrtc
+package com.brigitttta.remote_screencast
 
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
-import com.example.test_webrtc.srs.SrsActivity
+import com.brigitttta.remote_screencast.srs.SrsActivity
 
 
 class MainActivity : AppCompatActivity() {

@@ -1,4 +1,4 @@
-package com.example.test_webrtc.srs
+package com.brigitttta.remote_screencast.srs
 
 import android.content.Intent
 import android.media.projection.MediaProjection
@@ -12,10 +12,10 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
-import com.example.test_webrtc.MediaProjectionForegroundService
-import com.example.test_webrtc.R
-import com.example.test_webrtc.SimplePeerConnectionObserver
-import com.example.test_webrtc.SimpleSdpObserver
+import com.brigitttta.remote_screencast.MediaProjectionForegroundService
+import com.brigitttta.remote_screencast.R
+import com.brigitttta.remote_screencast.SimplePeerConnectionObserver
+import com.brigitttta.remote_screencast.SimpleSdpObserver
 import kotlinx.coroutines.*
 import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
@@ -26,6 +26,7 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 import java.time.LocalTime
 
+//依赖外部服务器推流 https://github.com/ossrs/srs
 class SrsActivity : AppCompatActivity() {
 
     interface ApiService {

@@ -13,5 +13,5 @@ dependencyResolutionManagement {
         jcenter()
     }
 }
-rootProject.name = "test_webrtc"
+rootProject.name = "remote_screencast"
 include ':app'

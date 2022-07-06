@@ -1,4 +1,4 @@
-package com.example.test_webrtc
+package com.brigitttta.remote_screencast
 
 import android.view.MotionEvent
 import java.io.Serializable
