@@ -37,16 +37,19 @@ class PushActivity : AppCompatActivity() {
 
 
     private val mainScope = MainScope()
+    lateinit var mediaStream: MediaStream
+    lateinit var peerConnectionFactory: PeerConnectionFactory
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_push)
-        initService()
+        startServer()
         push()
         testTextView()
     }
 
+    //显示时间用于测试延迟
     private fun testTextView() {
         val textView = findViewById<TextView>(R.id.tv_time)
         val handler = Handler()
@@ -60,7 +63,7 @@ class PushActivity : AppCompatActivity() {
         }, 16)
     }
 
-    private fun initService() {
+    private fun startServer() {
         mainScope.launch(Dispatchers.IO) {
             val bossGroup = NioEventLoopGroup()
             val workerGroup = NioEventLoopGroup()
@@ -79,14 +82,29 @@ class PushActivity : AppCompatActivity() {
                                 pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
                                     private var peerConnection: PeerConnection? = null
 
+                                    // 通过反射获取注入触摸事件需要的类,方法与变量
                                     private val inputManagerClass = Class.forName("android.hardware.input.InputManager")
                                     private val inputManagerInstance = inputManagerClass.getDeclaredMethod("getInstance")
                                     private val inputManager = inputManagerInstance.invoke(null) as android.hardware.input.InputManager
                                     private val injectInputEvent = inputManager.javaClass.getMethod("injectInputEvent", InputEvent::class.java, Int::class.javaPrimitiveType)
+
                                     private val screenHeight = ScreenUtils.getScreenHeight()
                                     private val screenWidth = ScreenUtils.getScreenWidth()
                                     private var downTime = 0L
+
                                     override fun channelActive(ctx: ChannelHandlerContext) {
+                                        createOffer(ctx)
+                                    }
+
+                                    override fun channelInactive(ctx: ChannelHandlerContext) {
+                                        disposeOffer(ctx)
+                                    }
+
+                                    override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
+                                        handlerMsg(ctx, msg)
+                                    }
+
+                                    private fun createOffer(ctx: ChannelHandlerContext) {
                                         //发送设备尺寸
                                         ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SIZE, size = Size(screenWidth, screenHeight)).toString())
 
@@ -100,18 +118,14 @@ class PushActivity : AppCompatActivity() {
                                         //创建对等连接
                                         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver("push") {
                                             override fun onIceCandidate(iceCandidate: IceCandidate) {
-                                                super.onIceCandidate(iceCandidate)
+                                                //发送 连接两端的主机的网络地址
                                                 ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.ICE, iceCandidate = iceCandidate).toString())
                                             }
 
                                             override fun onAddStream(mediaStream: MediaStream) {
-                                                super.onAddStream(mediaStream)
                                             }
                                         })
 
-                                        val mediaStream = peerConnectionFactory.createLocalMediaStream("102")
-                                        mediaStream.addTrack(audioTrack)
-                                        mediaStream.addTrack(videoTrack)
                                         peerConnection?.addStream(mediaStream)
 
                                         val sdpConstraints = MediaConstraints()
@@ -125,18 +139,20 @@ class PushActivity : AppCompatActivity() {
                                         }, sdpConstraints)
                                     }
 
-                                    override fun channelInactive(ctx: ChannelHandlerContext?) {
-                                        super.channelInactive(ctx)
+                                    private fun disposeOffer(ctx: ChannelHandlerContext) {
+                                        peerConnection?.removeStream(mediaStream)
                                         peerConnection?.dispose()
                                         peerConnection = null
                                     }
 
-                                    override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
+                                    private fun handlerMsg(ctx: ChannelHandlerContext, msg: String) {
                                         val webrtcMessage = WebrtcMessage(msg)
 
                                         when (webrtcMessage.type) {
                                             WebrtcMessage.Type.SDP -> {
+                                                // 接收远端sdp并将自身sdp发送给远端完成sdp交换
                                                 peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), webrtcMessage.description)
+                                                // 只有设置了远端sdp才能createAnswer
                                                 peerConnection?.createAnswer(object : SimpleSdpObserver("pull-createAnswer") {
                                                     override fun onCreateSuccess(description: SessionDescription) {
                                                         peerConnection?.setLocalDescription(SimpleSdpObserver("pull-setLocalDescription"), description)
@@ -145,11 +161,14 @@ class PushActivity : AppCompatActivity() {
                                                 }, MediaConstraints())
                                             }
                                             WebrtcMessage.Type.ICE -> {
+                                                // 接收 连接两端的主机的网络地址
+                                                // 发送在PeerConnectionFactory.createPeerConnection.onIceCandidate(iceCandidate: IceCandidate)
                                                 peerConnection?.addIceCandidate(webrtcMessage.iceCandidate)
                                             }
                                             WebrtcMessage.Type.MOVE -> {
+                                                // 注入触摸事件
                                                 runCatching {
-                                                    val model = webrtcMessage.motionModel!!
+                                                    val model = webrtcMessage.motionModel ?: return
                                                     // 处理时钟差异导致的ANR
                                                     val now = SystemClock.uptimeMillis()
                                                     if (model.action == MotionEvent.ACTION_DOWN) {
@@ -167,6 +186,7 @@ class PushActivity : AppCompatActivity() {
                                             else -> {}
                                         }
                                     }
+
                                 })
                             }
                         }).bind(8888).sync().channel().closeFuture().sync()
@@ -182,7 +202,7 @@ class PushActivity : AppCompatActivity() {
 
     private val registerMediaProjectionPermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         if (it.resultCode == RESULT_OK) {
-            pushCore(it.data)
+            initCore(it.data)
         } else {
             runOnUiThread {
                 Toast.makeText(this, "Need Media Projection Permission", Toast.LENGTH_LONG).show()
@@ -197,10 +217,8 @@ class PushActivity : AppCompatActivity() {
         registerMediaProjectionPermission.launch(mediaProjectionManager?.createScreenCaptureIntent())
     }
 
-    lateinit var audioTrack: AudioTrack
-    lateinit var videoTrack: VideoTrack
-    lateinit var peerConnectionFactory: PeerConnectionFactory
-    private fun pushCore(mediaProjectionPermissionResultData: Intent?) {
+
+    private fun initCore(mediaProjectionPermissionResultData: Intent?) {
         //EglBase
         val eglBase = EglBase.create()
         val eglBaseContext = eglBase.getEglBaseContext()
@@ -232,7 +250,7 @@ class PushActivity : AppCompatActivity() {
         //创建音频源
         val audioSource = peerConnectionFactory.createAudioSource(audioConstraints)
         //创建音轨
-        audioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", audioSource)
+        val audioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", audioSource)
 
         //屏幕捕获
         val videoCapturer = ScreenCapturerAndroid(mediaProjectionPermissionResultData, object : MediaProjection.Callback() {})
@@ -241,7 +259,14 @@ class PushActivity : AppCompatActivity() {
         val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext)
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.capturerObserver)
         videoCapturer.startCapture(ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), 60)
-        videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
+        //创建视频轨
+        val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
+
+        //创建媒体流
+        mediaStream = peerConnectionFactory.createLocalMediaStream("102")
+//        mediaStream.addTrack(audioTrack)
+        mediaStream.addTrack(videoTrack)
+
     }
 
     override fun onDestroy() {

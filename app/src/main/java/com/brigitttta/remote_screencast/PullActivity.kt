@@ -29,36 +29,21 @@ import org.webrtc.audio.JavaAudioDeviceModule
 
 class PullActivity : AppCompatActivity() {
     private val mainScope = MainScope()
+    private val eventLoopGroup = NioEventLoopGroup()
+
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-
-        window.decorView.systemUiVisibility =
-                (View.SYSTEM_UI_FLAG_LOW_PROFILE
-                        or View.SYSTEM_UI_FLAG_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_IMMERSIVE)
-
+        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LOW_PROFILE or View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE)
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
-
-
         setContentView(R.layout.activity_pull)
         initService()
-
-
     }
-
 
     private fun initService() {
         mainScope.launch(Dispatchers.IO) {
-            val eventLoopGroup = NioEventLoopGroup()
-            try {
+            runCatching {
                 Bootstrap()
                         .group(eventLoopGroup)
                         .channel(NioSocketChannel::class.java)
@@ -133,7 +118,6 @@ class PullActivity : AppCompatActivity() {
                                                 ctx?.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.ICE, iceCandidate = iceCandidate).toString())
                                             }
                                         })
-
                                     }
 
                                     override fun channelInactive(ctx: ChannelHandlerContext?) {
@@ -175,20 +159,21 @@ class PullActivity : AppCompatActivity() {
                                 })
                             }
                         })
-                        .connect("192.168.8.101", 8888).sync().channel().closeFuture().sync()
-            } catch (e: Exception) {
-                e.printStackTrace()
+                        .connect("192.168.8.101", 8888).sync()
+                        .channel()
+                        .closeFuture().sync()
+            }.onFailure {
+                it.printStackTrace()
                 eventLoopGroup.shutdownGracefully()
             }
-
         }
     }
 
 
     override fun onDestroy() {
         super.onDestroy()
+        eventLoopGroup.shutdownGracefully()
         mainScope.cancel()
-
     }
 
     companion object {

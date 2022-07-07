@@ -3,6 +3,8 @@ package com.brigitttta.remote_screencast
 import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.updateLayoutParams
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
@@ -141,11 +143,11 @@ class PullMoreActivity : AppCompatActivity() {
 
                                             }
                                             WebrtcMessage.Type.SIZE -> {
-//                                                runOnUiThread {
-//                                                    surfaceViewRenderer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-//                                                        dimensionRatio = "${webrtcMessage.size?.width}:${webrtcMessage.size?.height}"
-//                                                    }
-//                                                }
+                                                runOnUiThread {
+                                                    surfaceViewRenderer.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                                                        dimensionRatio = "${webrtcMessage.size?.width}:${webrtcMessage.size?.height}"
+                                                    }
+                                                }
                                             }
                                             else -> {}
                                         }
