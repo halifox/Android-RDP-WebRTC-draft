@@ -83,8 +83,8 @@ class PushActivity : AppCompatActivity() {
                                     private val inputManagerInstance = inputManagerClass.getDeclaredMethod("getInstance")
                                     private val inputManager = inputManagerInstance.invoke(null) as android.hardware.input.InputManager
                                     private val injectInputEvent = inputManager.javaClass.getMethod("injectInputEvent", InputEvent::class.java, Int::class.javaPrimitiveType)
-                                    private val screenHeight = ScreenUtils.getAppScreenHeight()
-                                    private val screenWidth = ScreenUtils.getAppScreenWidth()
+                                    private val screenHeight = ScreenUtils.getScreenHeight()
+                                    private val screenWidth = ScreenUtils.getScreenWidth()
                                     private var downTime = 0L
                                     override fun channelActive(ctx: ChannelHandlerContext) {
                                         //发送设备尺寸
@@ -240,7 +240,7 @@ class PushActivity : AppCompatActivity() {
         val videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast)
         val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext)
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.capturerObserver)
-        videoCapturer.startCapture(ScreenUtils.getAppScreenWidth(), ScreenUtils.getAppScreenHeight(), 60)
+        videoCapturer.startCapture(ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), 60)
         videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
     }
 
