@@ -8,6 +8,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_PRIVILEGED_PHONE_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -44,6 +45,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".PullActivity" />
+        <activity android:name=".PushByReflectionActivity" />
 
         <service
             android:name=".MediaProjectionForegroundService"

@@ -16,6 +16,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_push).setOnClickListener {
             startActivity(Intent(this, PushActivity::class.java))
         }
+        findViewById<Button>(R.id.btn_push_reflection).setOnClickListener {
+            startActivity(Intent(this, PushByReflectionActivity::class.java))
+        }
         findViewById<Button>(R.id.btn_pull).setOnClickListener {
             startActivity(Intent(this, PullActivity::class.java))
         }

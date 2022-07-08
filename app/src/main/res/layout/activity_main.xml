@@ -15,6 +15,12 @@
         android:text="push" />
 
     <Button
+        android:id="@+id/btn_push_reflection"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="push reflection" />
+
+    <Button
         android:id="@+id/btn_pull"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
