@@ -13,8 +13,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        findViewById<Button>(R.id.btn_push).setOnClickListener {
-            startActivity(Intent(this, PushActivity::class.java))
+        findViewById<Button>(R.id.btn_push_mediaProjectionManager).setOnClickListener {
+            startActivity(Intent(this, PushByMediaProjectionManagerActivity::class.java))
         }
         findViewById<Button>(R.id.btn_push_reflection).setOnClickListener {
             startActivity(Intent(this, PushByReflectionActivity::class.java))

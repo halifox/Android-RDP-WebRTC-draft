@@ -33,7 +33,7 @@
             android:name=".PullMoreActivity"
             android:exported="false" />
         <activity
-            android:name=".PushActivity"
+            android:name=".PushByMediaProjectionManagerActivity"
             android:exported="false" />
         <activity
             android:name=".MainActivity"

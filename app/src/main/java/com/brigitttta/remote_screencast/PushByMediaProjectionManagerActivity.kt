@@ -33,7 +33,7 @@ import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
 import java.time.LocalTime
 
-class PushActivity : AppCompatActivity() {
+class PushByMediaProjectionManagerActivity : AppCompatActivity() {
 
 
     private val mainScope = MainScope()
