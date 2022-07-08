@@ -2,10 +2,11 @@ package com.brigitttta.remote_screencast
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.view.View
-import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updateLayoutParams
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelHandlerContext
@@ -35,11 +36,23 @@ class PullActivity : AppCompatActivity() {
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LOW_PROFILE or View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE)
-        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
         setContentView(R.layout.activity_pull)
         initService()
     }
+
+    override fun onStart() {
+        super.onStart()
+        hideSystemBars()
+    }
+
+    private fun hideSystemBars() {
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        // 配置隐藏系统栏的行为
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        // 隐藏状态栏和导航栏
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+    }
+
 
     private fun initService() {
         mainScope.launch(Dispatchers.IO) {
@@ -159,7 +172,7 @@ class PullActivity : AppCompatActivity() {
                                 })
                             }
                         })
-                        .connect("192.168.8.101", 8888).sync()
+                        .connect("192.168.8.102", 8888).sync()
                         .channel()
                         .closeFuture().sync()
             }.onFailure {

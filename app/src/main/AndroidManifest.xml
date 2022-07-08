@@ -44,7 +44,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".PullActivity" />
+        <activity android:name=".PullActivity"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar"/>
         <activity android:name=".PushByReflectionActivity" />
 
         <service
