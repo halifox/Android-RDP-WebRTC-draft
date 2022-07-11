@@ -25,8 +25,8 @@
         app:layout_constraintGuide_percent="0.5" />
 
 
-    <org.webrtc.SurfaceViewRenderer
-        android:id="@+id/srv1"
+    <FrameLayout
+        android:id="@+id/container1"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="@id/gl_h"
@@ -34,8 +34,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <org.webrtc.SurfaceViewRenderer
-        android:id="@+id/srv2"
+    <FrameLayout
+        android:id="@+id/container2"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="@id/gl_h"
@@ -43,8 +43,8 @@
         app:layout_constraintStart_toStartOf="@id/gl_v"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <org.webrtc.SurfaceViewRenderer
-        android:id="@+id/srv3"
+    <FrameLayout
+        android:id="@+id/container3"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -52,8 +52,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/gl_h" />
 
-    <org.webrtc.SurfaceViewRenderer
-        android:id="@+id/srv4"
+    <FrameLayout
+        android:id="@+id/container4"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"

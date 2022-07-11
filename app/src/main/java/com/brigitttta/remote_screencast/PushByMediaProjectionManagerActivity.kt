@@ -39,7 +39,8 @@ class PushByMediaProjectionManagerActivity : AppCompatActivity() {
     private val mainScope = MainScope()
     lateinit var mediaStream: MediaStream
     lateinit var peerConnectionFactory: PeerConnectionFactory
-
+    private val bossGroup = NioEventLoopGroup()
+    private val workerGroup = NioEventLoopGroup()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,8 +66,6 @@ class PushByMediaProjectionManagerActivity : AppCompatActivity() {
 
     private fun startServer() {
         mainScope.launch(Dispatchers.IO) {
-            val bossGroup = NioEventLoopGroup()
-            val workerGroup = NioEventLoopGroup()
             try {
                 ServerBootstrap()
                         .group(bossGroup, workerGroup)
@@ -271,6 +270,8 @@ class PushByMediaProjectionManagerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        workerGroup.shutdownGracefully()
+        bossGroup.shutdownGracefully()
         mainScope.cancel()
         MediaProjectionForegroundService.stop(this)
     }
