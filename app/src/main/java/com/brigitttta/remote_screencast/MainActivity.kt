@@ -16,18 +16,18 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        StrictMode.setThreadPolicy(ThreadPolicy.Builder()
-                .detectDiskReads()
-                .detectDiskWrites()
-                .detectNetwork() // or .detectAll() for all detectable problems
-                .penaltyLog()
-                .build())
-        StrictMode.setVmPolicy(VmPolicy.Builder()
-                .detectLeakedSqlLiteObjects()
-                .detectLeakedClosableObjects()
-                .penaltyLog()
-                .penaltyDeath()
-                .build())
+//        StrictMode.setThreadPolicy(ThreadPolicy.Builder()
+//                .detectDiskReads()
+//                .detectDiskWrites()
+//                .detectNetwork() // or .detectAll() for all detectable problems
+//                .penaltyLog()
+//                .build())
+//        StrictMode.setVmPolicy(VmPolicy.Builder()
+//                .detectLeakedSqlLiteObjects()
+//                .detectLeakedClosableObjects()
+//                .penaltyLog()
+//                .penaltyDeath()
+//                .build())
         findViewById<Button>(R.id.btn_push_mediaProjectionManager).setOnClickListener {
             startActivity(Intent(this, PushByMediaProjectionManagerActivity::class.java))
         }
