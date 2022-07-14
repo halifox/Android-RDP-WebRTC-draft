@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
+import com.blankj.utilcode.util.ScreenUtils
 import com.brigitttta.remote_screencast.MediaProjectionForegroundService
 import com.brigitttta.remote_screencast.R
 import com.brigitttta.remote_screencast.SimplePeerConnectionObserver
@@ -229,7 +230,7 @@ class SrsActivity : AppCompatActivity() {
         val videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast)
         val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext)
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.capturerObserver)
-        videoCapturer.startCapture(2160, 1080, 60)
+        videoCapturer.startCapture(ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), 60)
         val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
 
 /*

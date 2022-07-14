@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.brigitttta.remote_screencast"
-    >
+    android:sharedUserId="android.uid.system">
 
     <uses-permission android:name="android.permission.INJECT_EVENTS" />
 
@@ -44,9 +44,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".PullActivity"
-            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar"/>
+        <activity
+            android:name=".PullActivity"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
         <activity android:name=".PushByReflectionActivity" />
+        <activity android:name=".TestActivity" />
 
         <service
             android:name=".MediaProjectionForegroundService"

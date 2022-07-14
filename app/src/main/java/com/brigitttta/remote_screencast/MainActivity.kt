@@ -2,9 +2,6 @@ package com.brigitttta.remote_screencast
 
 import android.content.Intent
 import android.os.Bundle
-import android.os.StrictMode
-import android.os.StrictMode.ThreadPolicy
-import android.os.StrictMode.VmPolicy
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import com.brigitttta.remote_screencast.srs.SrsActivity
@@ -42,6 +39,9 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.btn_srs).setOnClickListener {
             startActivity(Intent(this, SrsActivity::class.java))
+        }
+        findViewById<Button>(R.id.btn_test).setOnClickListener {
+            startActivity(Intent(this, TestActivity::class.java))
         }
     }
 }

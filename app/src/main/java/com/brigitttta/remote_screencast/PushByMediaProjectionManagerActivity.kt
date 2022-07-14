@@ -31,6 +31,7 @@ import io.netty.util.CharsetUtil
 import kotlinx.coroutines.*
 import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
+import java.io.File
 import java.time.LocalTime
 
 class PushByMediaProjectionManagerActivity : AppCompatActivity() {
@@ -251,6 +252,7 @@ class PushByMediaProjectionManagerActivity : AppCompatActivity() {
         //创建音轨
         val audioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", audioSource)
 
+//        val videoCapturer = FileVideoCapturer("/sdcard/test.y4m")
         //屏幕捕获
         val videoCapturer = ScreenCapturerAndroid(mediaProjectionPermissionResultData, object : MediaProjection.Callback() {})
         //创建视频源
@@ -260,7 +262,8 @@ class PushByMediaProjectionManagerActivity : AppCompatActivity() {
         videoCapturer.startCapture(ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), 60)
         //创建视频轨
         val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
-
+//        val videoFileRenderer = VideoFileRenderer("/sdcard/test.y4m",ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), eglBaseContext)
+//        videoTrack.addSink(videoFileRenderer)
         //创建媒体流
         mediaStream = peerConnectionFactory.createLocalMediaStream("102")
 //        mediaStream.addTrack(audioTrack)
