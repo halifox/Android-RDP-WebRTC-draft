@@ -31,7 +31,6 @@ import io.netty.util.CharsetUtil
 import kotlinx.coroutines.*
 import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
-import java.io.File
 import java.time.LocalTime
 
 class PushByMediaProjectionManagerActivity : AppCompatActivity() {
@@ -115,6 +114,7 @@ class PushByMediaProjectionManagerActivity : AppCompatActivity() {
                                         rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
                                         rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
                                         rtcConfig.keyType = PeerConnection.KeyType.ECDSA
+                                        rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.PLAN_B
                                         //创建对等连接
                                         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver("push") {
                                             override fun onIceCandidate(iceCandidate: IceCandidate) {

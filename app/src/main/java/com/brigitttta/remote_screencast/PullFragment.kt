@@ -115,6 +115,7 @@ class PullFragment : Fragment() {
                                             rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
                                             continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
                                             keyType = PeerConnection.KeyType.ECDSA
+                                            sdpSemantics = PeerConnection.SdpSemantics.PLAN_B
                                         }
 
 
