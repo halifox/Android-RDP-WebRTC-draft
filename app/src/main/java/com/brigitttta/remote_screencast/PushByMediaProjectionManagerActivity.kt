@@ -37,7 +37,9 @@ class PushByMediaProjectionManagerActivity : AppCompatActivity() {
 
 
     private val mainScope = MainScope()
-    lateinit var mediaStream: MediaStream
+
+    lateinit var videoTrack: VideoTrack
+    lateinit var audioTrack: AudioTrack
     lateinit var peerConnectionFactory: PeerConnectionFactory
     private val bossGroup = NioEventLoopGroup()
     private val workerGroup = NioEventLoopGroup()
@@ -114,20 +116,16 @@ class PushByMediaProjectionManagerActivity : AppCompatActivity() {
                                         rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
                                         rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
                                         rtcConfig.keyType = PeerConnection.KeyType.ECDSA
-                                        rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.PLAN_B
                                         //创建对等连接
                                         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver("push") {
                                             override fun onIceCandidate(iceCandidate: IceCandidate) {
                                                 //发送 连接两端的主机的网络地址
                                                 ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.ICE, iceCandidate = iceCandidate).toString())
                                             }
-
-                                            override fun onAddStream(mediaStream: MediaStream) {
-                                            }
                                         })
 
-                                        peerConnection?.addStream(mediaStream)
-
+                                        peerConnection?.addTrack(videoTrack)
+//                                        peerConnection?.addTrack(audioTrack)
                                         val sdpConstraints = MediaConstraints()
                                         sdpConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
                                         sdpConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
@@ -140,7 +138,6 @@ class PushByMediaProjectionManagerActivity : AppCompatActivity() {
                                     }
 
                                     private fun disposeOffer(ctx: ChannelHandlerContext) {
-                                        peerConnection?.removeStream(mediaStream)
                                         peerConnection?.dispose()
                                         peerConnection = null
                                     }
@@ -250,7 +247,7 @@ class PushByMediaProjectionManagerActivity : AppCompatActivity() {
         //创建音频源
         val audioSource = peerConnectionFactory.createAudioSource(audioConstraints)
         //创建音轨
-        val audioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", audioSource)
+        audioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", audioSource)
 
 //        val videoCapturer = FileVideoCapturer("/sdcard/test.y4m")
         //屏幕捕获
@@ -261,13 +258,9 @@ class PushByMediaProjectionManagerActivity : AppCompatActivity() {
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.capturerObserver)
         videoCapturer.startCapture(ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), 60)
         //创建视频轨
-        val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
+        videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
 //        val videoFileRenderer = VideoFileRenderer("/sdcard/test.y4m",ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), eglBaseContext)
 //        videoTrack.addSink(videoFileRenderer)
-        //创建媒体流
-        mediaStream = peerConnectionFactory.createLocalMediaStream("102")
-//        mediaStream.addTrack(audioTrack)
-        mediaStream.addTrack(videoTrack)
 
     }
 

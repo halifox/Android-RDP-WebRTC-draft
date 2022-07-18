@@ -115,21 +115,20 @@ class PullFragment : Fragment() {
                                             rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
                                             continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
                                             keyType = PeerConnection.KeyType.ECDSA
-                                            sdpSemantics = PeerConnection.SdpSemantics.PLAN_B
+//                                            sdpSemantics = PeerConnection.SdpSemantics.PLAN_B
                                         }
 
 
                                         //创建对等连接
                                         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver("pull") {
-                                            override fun onAddStream(mediaStream: MediaStream) {
-                                                super.onAddStream(mediaStream)
-                                                if (mediaStream.videoTracks.isNotEmpty()) {
-                                                    //显示
-                                                    mediaStream.videoTracks[0].addSink(surfaceViewRenderer)
-                                                }
-                                                if (mediaStream.audioTracks.isNotEmpty()) {
 
-                                                    mediaStream.audioTracks[0]
+                                            override fun onAddTrack(rtpReceiver: RtpReceiver, mediaStreams: Array<out MediaStream>) {
+                                                super.onAddTrack(rtpReceiver, mediaStreams)
+                                                val track = rtpReceiver.track()
+                                                when (track) {
+                                                    is VideoTrack -> {
+                                                        track.addSink(surfaceViewRenderer)
+                                                    }
                                                 }
                                             }
 
