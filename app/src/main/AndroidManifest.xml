@@ -23,6 +23,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:name=".APP"
         android:theme="@style/Theme.Test_webrtc"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
@@ -52,6 +53,9 @@
 
         <service
             android:name=".MediaProjectionForegroundService"
+            android:foregroundServiceType="mediaProjection" />
+        <service
+            android:name=".PushByMediaProjectionManagerService"
             android:foregroundServiceType="mediaProjection" />
     </application>
 
