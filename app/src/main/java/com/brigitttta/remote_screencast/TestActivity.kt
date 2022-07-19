@@ -6,6 +6,7 @@ import com.blankj.utilcode.util.ScreenUtils
 import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
 
+@Deprecated("")
 class TestActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,7 +21,7 @@ class TestActivity : AppCompatActivity() {
         val surfaceViewRenderer2 = findViewById<SurfaceViewRenderer>(R.id.srv2)
         surfaceViewRenderer2.init(eglBaseContext, null)
         //初始化
-        PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions())
+//        PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions())
         //视频编码器
         val encoderFactory = DefaultVideoEncoderFactory(eglBaseContext, true, true)
         //视频解码器

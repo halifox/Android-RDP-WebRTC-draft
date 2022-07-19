@@ -91,7 +91,7 @@ class PullFragment : Fragment() {
 
 
                                         //初始化
-                                        PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(requireContext().applicationContext).createInitializationOptions())
+//                                        PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(requireContext().applicationContext).createInitializationOptions())
                                         //视频编码器
                                         val encoderFactory = DefaultVideoEncoderFactory(eglBaseContext, true, true)
                                         //视频解码器

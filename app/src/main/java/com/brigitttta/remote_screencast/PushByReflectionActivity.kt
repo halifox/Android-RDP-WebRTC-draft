@@ -27,6 +27,7 @@ import org.webrtc.*
 import org.webrtc.audio.JavaAudioDeviceModule
 import java.time.LocalTime
 
+@Deprecated("")
 class PushByReflectionActivity : AppCompatActivity() {
 
 
@@ -232,7 +233,7 @@ class PushByReflectionActivity : AppCompatActivity() {
         val eglBase = EglBase.create()
         val eglBaseContext = eglBase.getEglBaseContext()
         //初始化
-        PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions())
+//        PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions())
         //视频编码器
         val encoderFactory = DefaultVideoEncoderFactory(eglBaseContext, true, true)
         //视频解码器

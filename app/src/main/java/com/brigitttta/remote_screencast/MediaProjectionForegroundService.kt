@@ -9,7 +9,7 @@ import androidx.core.app.NotificationChannelGroupCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 
-
+@Deprecated("")
 class MediaProjectionForegroundService : Service() {
     companion object {
 
