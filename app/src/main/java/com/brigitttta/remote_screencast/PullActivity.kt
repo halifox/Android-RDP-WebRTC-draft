@@ -12,7 +12,7 @@ class PullActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pull)
-        val pullFragment = PullFragment.newInstance("192.168.8.101", 8888)
+        val pullFragment = PullFragment.newInstance("192.168.8.102", 8888)
         supportFragmentManager.beginTransaction()
                 .add(R.id.container, pullFragment)
                 .commit()
