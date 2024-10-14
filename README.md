@@ -1,5 +1,39 @@
-android:sharedUserId="android.uid.system"
+# Android 局域网 WebRTC 视频流传输与远程控制示例应用
 
-./gradlew aRelease
+## 简介
+该应用通过以下步骤实现：
+1. 使用 Android 的录屏权限捕获屏幕内容。
+2. 将屏幕内容编码为 AVC（H.264）视频流。
+3. 通过 WebRTC 连接将编码的视频流传输到局域网中的另一台设备。
+4. 使用反射调用 `InputManager` 的 `injectInputEvent` 方法，实现远程设备的控制。
 
-signapk.jar platform.x509.pem platform.pk8 noSign.apk 
+## 功能
+- 屏幕捕获与实时编码
+- WebRTC 视频流传输
+- 远程控制事件注入
+
+## 环境要求
+- Android 5.0（API Level 21）及以上
+- 局域网内的另一台设备作为客户端（接收端）
+- WebRTC 支持
+
+## 安装
+1. 将项目克隆到本地：
+2. 打开 Android Studio 并加载该项目。
+3. 连接测试设备，点击“运行”以安装应用。
+
+## 使用
+1. 启动应用，授予屏幕录制权限。
+2. 设置接收端设备的 IP 地址。
+3. 点击“开始传输”以启动 WebRTC 视频流。
+4. 使用接收端应用连接并观看视频流，同时可通过触控事件进行远程控制。
+
+## 代码结构
+- `ScreenCaptureService`：用于捕获屏幕内容并编码。
+- `WebRTCConnection`：用于设置 WebRTC 连接并传输数据。
+- `InputManagerInjector`：通过反射注入触摸与按键事件。
+
+## 注意事项
+- 反射调用 `InputManager` 属于非公开 API，可能会影响应用兼容性。
+- 确保接收端设备在同一局域网中，并正确配置了接收端应用。
+- 请仅在合法授权的设备上使用本应用。
