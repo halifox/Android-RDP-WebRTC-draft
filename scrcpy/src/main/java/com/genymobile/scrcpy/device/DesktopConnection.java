@@ -4,13 +4,13 @@ import com.genymobile.scrcpy.control.ControlChannel;
 import com.genymobile.scrcpy.util.IO;
 import com.genymobile.scrcpy.util.StringUtils;
 
-import android.net.LocalServerSocket;
-import android.net.LocalSocket;
-import android.net.LocalSocketAddress;
 
 import java.io.Closeable;
-import java.io.FileDescriptor;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 public final class DesktopConnection implements Closeable {
@@ -19,29 +19,30 @@ public final class DesktopConnection implements Closeable {
 
     private static final String SOCKET_NAME_PREFIX = "scrcpy";
 
-    private final LocalSocket videoSocket;
-    private final FileDescriptor videoFd;
+    private final Socket videoSocket;
+    private final OutputStream videoFd;
 
-    private final LocalSocket audioSocket;
-    private final FileDescriptor audioFd;
+    private final Socket audioSocket;
+    private final OutputStream audioFd;
 
-    private final LocalSocket controlSocket;
+    private final Socket controlSocket;
     private final ControlChannel controlChannel;
 
-    private DesktopConnection(LocalSocket videoSocket, LocalSocket audioSocket, LocalSocket controlSocket) throws IOException {
+    private DesktopConnection(Socket videoSocket, Socket audioSocket, Socket controlSocket) throws IOException {
         this.videoSocket = videoSocket;
         this.audioSocket = audioSocket;
         this.controlSocket = controlSocket;
 
-        videoFd = videoSocket != null ? videoSocket.getFileDescriptor() : null;
-        audioFd = audioSocket != null ? audioSocket.getFileDescriptor() : null;
+
+        videoFd = videoSocket != null ? videoSocket.getOutputStream() : null;
+        audioFd = audioSocket != null ? audioSocket.getOutputStream() : null;
         controlChannel = controlSocket != null ? new ControlChannel(controlSocket) : null;
     }
 
-    private static LocalSocket connect(String abstractName) throws IOException {
-        LocalSocket localSocket = new LocalSocket();
-        localSocket.connect(new LocalSocketAddress(abstractName));
-        return localSocket;
+    private static Socket connect(String abstractName) throws IOException {
+        Socket Socket = new Socket();
+        Socket.connect(new InetSocketAddress(abstractName,40000));
+        return Socket;
     }
 
     private static String getSocketName(int scid) {
@@ -57,12 +58,12 @@ public final class DesktopConnection implements Closeable {
             throws IOException {
         String socketName = getSocketName(scid);
 
-        LocalSocket videoSocket = null;
-        LocalSocket audioSocket = null;
-        LocalSocket controlSocket = null;
+        Socket videoSocket = null;
+        Socket audioSocket = null;
+        Socket controlSocket = null;
         try {
             if (tunnelForward) {
-                try (LocalServerSocket localServerSocket = new LocalServerSocket(socketName)) {
+                try (ServerSocket localServerSocket = new ServerSocket(40000)) {
                     if (video) {
                         videoSocket = localServerSocket.accept();
                         if (sendDummyByte) {
@@ -115,7 +116,7 @@ public final class DesktopConnection implements Closeable {
         return new DesktopConnection(videoSocket, audioSocket, controlSocket);
     }
 
-    private LocalSocket getFirstSocket() {
+    private Socket getFirstSocket() {
         if (videoSocket != null) {
             return videoSocket;
         }
@@ -160,15 +161,15 @@ public final class DesktopConnection implements Closeable {
         System.arraycopy(deviceNameBytes, 0, buffer, 0, len);
         // byte[] are always 0-initialized in java, no need to set '\0' explicitly
 
-        FileDescriptor fd = getFirstSocket().getFileDescriptor();
+        OutputStream fd = getFirstSocket().getOutputStream();
         IO.writeFully(fd, buffer, 0, buffer.length);
     }
 
-    public FileDescriptor getVideoFd() {
+    public OutputStream getVideoFd() {
         return videoFd;
     }
 
-    public FileDescriptor getAudioFd() {
+    public OutputStream getAudioFd() {
         return audioFd;
     }
 

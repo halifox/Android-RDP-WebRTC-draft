@@ -8,6 +8,7 @@ import android.media.MediaCodec;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
@@ -17,14 +18,14 @@ public final class Streamer {
     private static final long PACKET_FLAG_CONFIG = 1L << 63;
     private static final long PACKET_FLAG_KEY_FRAME = 1L << 62;
 
-    private final FileDescriptor fd;
+    private final OutputStream fd;
     private final Codec codec;
     private final boolean sendCodecMeta;
     private final boolean sendFrameMeta;
 
     private final ByteBuffer headerBuffer = ByteBuffer.allocate(12);
 
-    public Streamer(FileDescriptor fd, Codec codec, boolean sendCodecMeta, boolean sendFrameMeta) {
+    public Streamer(OutputStream fd, Codec codec, boolean sendCodecMeta, boolean sendFrameMeta) {
         this.fd = fd;
         this.codec = codec;
         this.sendCodecMeta = sendCodecMeta;
@@ -89,7 +90,7 @@ public final class Streamer {
         writePacket(codecBuffer, pts, config, keyFrame);
     }
 
-    private void writeFrameMeta(FileDescriptor fd, int packetSize, long pts, boolean config, boolean keyFrame) throws IOException {
+    private void writeFrameMeta(OutputStream fd, int packetSize, long pts, boolean config, boolean keyFrame) throws IOException {
         headerBuffer.clear();
 
         long ptsAndFlags;

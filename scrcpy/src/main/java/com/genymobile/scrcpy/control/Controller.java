@@ -1,9 +1,20 @@
 package com.genymobile.scrcpy.control;
 
+import android.content.IOnPrimaryClipChangedListener;
+import android.content.Intent;
+import android.os.Build;
+import android.os.SystemClock;
+import android.util.Pair;
+import android.view.InputDevice;
+import android.view.KeyCharacterMap;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
+
 import com.genymobile.scrcpy.AndroidVersions;
 import com.genymobile.scrcpy.AsyncProcessor;
 import com.genymobile.scrcpy.CleanUp;
 import com.genymobile.scrcpy.Options;
+import com.genymobile.scrcpy.compat.CoreControllerCompat;
 import com.genymobile.scrcpy.device.Device;
 import com.genymobile.scrcpy.device.DeviceApp;
 import com.genymobile.scrcpy.device.Point;
@@ -16,16 +27,6 @@ import com.genymobile.scrcpy.video.VirtualDisplayListener;
 import com.genymobile.scrcpy.wrappers.ClipboardManager;
 import com.genymobile.scrcpy.wrappers.InputManager;
 import com.genymobile.scrcpy.wrappers.ServiceManager;
-
-import android.content.IOnPrimaryClipChangedListener;
-import android.content.Intent;
-import android.os.Build;
-import android.os.SystemClock;
-import android.util.Pair;
-import android.view.InputDevice;
-import android.view.KeyCharacterMap;
-import android.view.KeyEvent;
-import android.view.MotionEvent;
 
 import java.io.IOException;
 import java.util.List;
@@ -374,7 +375,8 @@ public class Controller implements AsyncProcessor, VirtualDisplayListener {
             targetDisplayId = displayData.virtualDisplayId;
         } else {
             // No display, use the raw coordinates
-            point = position.getPoint();
+//            point = position.getPoint();
+            point = CoreControllerCompat.INSTANCE.mapToScreen(position);
             targetDisplayId = displayId;
         }
 

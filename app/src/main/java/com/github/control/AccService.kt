@@ -1,63 +1,65 @@
 package com.github.control
 
 import android.accessibilityservice.AccessibilityService
-import android.os.Parcel
-import android.util.Log
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.view.InputEvent
+import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
-import kotlinx.coroutines.Dispatchers
+import com.genymobile.scrcpy.BuildConfig
+import com.genymobile.scrcpy.Server
+import com.genymobile.scrcpy.compat.CoreControllerCompat
+import com.genymobile.scrcpy.compat.InputEventHandler
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
-import java.io.DataInputStream
-import java.net.ServerSocket
 
-
-class AccService : AccessibilityService() {
+class AccService : AccessibilityService(), InputEventHandler {
+    private val context = this
     private val coroutineScope = MainScope()
-    private val serverSocket = ServerSocket(40000, 1)
+
     private val motionEventHandler = MotionEventHandler(this)
-    private val keyEventHandler = KeyEventHandler(this)
+
+    private val inputEventHandlerInterface = object : InputEventHandler {
+        override fun injectInputEvent(inputEvent: InputEvent?, injectMode: Int): Boolean {
+            if (inputEvent is MotionEvent) {
+                motionEventHandler.handleEvent(inputEvent)
+            }
+            return true
+        }
+    }
+    private val receiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            CoreControllerCompat.updateDisplayMetrics(context)
+        }
+    }
+    private val scrcpyThread = Thread {
+        Server.main(
+            BuildConfig.VERSION_NAME,
+            "tunnel_forward=true",
+            "control=true",
+            "video=false",
+            "audio=false",
+            "send_dummy_byte=false",
+            "clipboard_autosync=false",
+        )
+    }
 
 
     override fun onCreate() {
         super.onCreate()
-        coroutineScope.launch(Dispatchers.IO) {
-            while (true) {
-                try {
-                    val clientSocket = serverSocket.accept()
-                    Log.d("TAG", "serverSocket.accept:${clientSocket} ")
-                    val inputStream = DataInputStream(clientSocket.getInputStream())
-                    while (true) {
-                        val size = inputStream.readInt()
-                        val data = ByteArray(size)
-                        inputStream.readFully(data)
-                        processEvent(data)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
+        registerReceiver(receiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED))
+        CoreControllerCompat.updateDisplayMetrics(context)
+        CoreControllerCompat.inputEventHandlerInterface = inputEventHandlerInterface
+        scrcpyThread.start()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        scrcpyThread.destroy()
         coroutineScope.cancel()
-        serverSocket.close()
-    }
-
-
-    private fun processEvent(bytes: ByteArray) {
-        val parcel = Parcel.obtain()
-        parcel.unmarshall(bytes, 0, bytes.size)
-        parcel.setDataPosition(0)
-        val eventType = parcel.readInt()
-        parcel.setDataPosition(0)
-        when (eventType) {
-            1 -> motionEventHandler.handleEvent(parcel)
-            2 -> keyEventHandler.handleEvent(parcel)
-        }
-        parcel.recycle()
+        unregisterReceiver(receiver)
     }
 
 
@@ -65,3 +67,4 @@ class AccService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
     override fun onInterrupt() {}
 }
+

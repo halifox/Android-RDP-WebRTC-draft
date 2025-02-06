@@ -98,7 +98,7 @@ public final class Server {
         boolean audio = options.getAudio();
         boolean sendDummyByte = options.getSendDummyByte();
 
-        Workarounds.apply();
+//        Workarounds.apply();
 
         List<AsyncProcessor> asyncProcessors = new ArrayList<>();
 
@@ -235,11 +235,11 @@ public final class Server {
                 Ln.i(LogUtils.buildDisplayListMessage());
             }
             if (options.getListCameras() || options.getListCameraSizes()) {
-                Workarounds.apply();
+//                Workarounds.apply();
                 Ln.i(LogUtils.buildCameraListMessage(options.getListCameraSizes()));
             }
             if (options.getListApps()) {
-                Workarounds.apply();
+//                Workarounds.apply();
                 Ln.i("Processing Android apps... (this may take some time)");
                 Ln.i(LogUtils.buildAppListMessage());
             }

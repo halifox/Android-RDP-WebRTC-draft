@@ -3,8 +3,6 @@ package com.github.control
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
-import android.os.Parcel
-import android.util.Log
 import android.view.MotionEvent
 
 
@@ -84,12 +82,8 @@ class MotionEventHandler(
     private val gestureTrackerManager: GestureTrackerManager = GestureTrackerManager(),
 ) {
     private var isGestureActive = false
-    private var index = 0
-    fun handleEvent(parcel: Parcel) {
+    fun handleEvent(motionEvent: MotionEvent) {
         try {
-
-
-            val motionEvent = MotionEvent.CREATOR.createFromParcel(parcel)
             val actionMasked = motionEvent.actionMasked
             val actionIndex = motionEvent.actionIndex
             val pointerId = motionEvent.getPointerId(actionIndex)
@@ -132,14 +126,12 @@ class MotionEventHandler(
     private fun onActionMove(pointerId: Int, x: Float, y: Float, motionEvent: MotionEvent) {
         if (isGestureActive) {
             val builder = GestureDescription.Builder()
-            val pointerCount = motionEvent.pointerCount
-            while (index < pointerCount) {
+            for (index in 0 until motionEvent.pointerCount) {
                 val tracker = gestureTrackerManager.getTrackerByPointerId(motionEvent.getPointerId(index))
                 if (tracker != null) {
                     tracker.updateStroke(motionEvent.getX(index), motionEvent.getY(index), true)
                     builder.addStroke(tracker.stroke!!)
                 }
-                index++
             }
             accessibilityService.dispatchGesture(builder.build(), null, null)
         }
@@ -168,15 +160,11 @@ class MotionEventHandler(
             tracker.updateStroke(x, y, false)
             val builder = GestureDescription.Builder()
             builder.addStroke(tracker.stroke!!)
-            val trackers = gestureTrackerManager.trackers
-            val length = trackers.size
-            while (index < length) {
-                val otherTracker = trackers[index]
+            for (otherTracker in gestureTrackerManager.trackers) {
                 if (otherTracker.isTracking && otherTracker != tracker) {
                     otherTracker.updateStroke(otherTracker.previousX, otherTracker.previousY, true)
                     builder.addStroke(otherTracker.stroke!!)
                 }
-                index++
             }
             tracker.reset()
             accessibilityService.dispatchGesture(builder.build(), null, null)
@@ -187,15 +175,11 @@ class MotionEventHandler(
         val availableTracker = gestureTrackerManager.getAvailableTracker()
         if (isGestureActive && availableTracker != null) {
             val builder = GestureDescription.Builder()
-            val trackers = gestureTrackerManager.trackers
-            val length = trackers.size
-            while (index < length) {
-                val tracker = trackers[index]
+            for (tracker in gestureTrackerManager.trackers) {
                 if (tracker.isTracking) {
                     tracker.startTracking(tracker.pointerId, tracker.previousX, tracker.previousY)
                     builder.addStroke(tracker.stroke!!)
                 }
-                index++
             }
             availableTracker.startTracking(pointerId, x, y)
             builder.addStroke(availableTracker.stroke!!)

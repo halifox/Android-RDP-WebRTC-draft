@@ -27,9 +27,8 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
-    buildFeatures {
-        aidl = true
-        buildConfig = true
+    lint {
+        abortOnError = false
     }
 }
 

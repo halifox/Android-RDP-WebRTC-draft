@@ -2,6 +2,7 @@ package com.genymobile.scrcpy.device;
 
 import com.genymobile.scrcpy.AndroidVersions;
 import com.genymobile.scrcpy.FakeContext;
+import com.genymobile.scrcpy.compat.CoreControllerCompat;
 import com.genymobile.scrcpy.util.Ln;
 import com.genymobile.scrcpy.wrappers.ActivityManager;
 import com.genymobile.scrcpy.wrappers.ClipboardManager;
@@ -66,7 +67,7 @@ public final class Device {
             return false;
         }
 
-        return ServiceManager.getInputManager().injectInputEvent(inputEvent, injectMode);
+        return CoreControllerCompat.INSTANCE.injectInputEvent(inputEvent, injectMode);
     }
 
     public static boolean injectKeyEvent(int action, int keyCode, int repeat, int metaState, int displayId, int injectMode) {
