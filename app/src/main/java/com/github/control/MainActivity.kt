@@ -3,11 +3,8 @@ package com.github.control
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.HandlerThread
 import android.provider.Settings
 import android.util.Log
-import android.view.MotionEvent
 import android.view.View
 import android.widget.EditText
 import androidx.activity.enableEdgeToEdge
@@ -15,14 +12,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.github.control.scrcpy.Injector
-import java.io.DataOutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 
 
 @SuppressLint("MissingInflatedId", "ClickableViewAccessibility")
 class MainActivity : AppCompatActivity() {
-    val context = this
+    private val context = this
+    private var eventSocketHandler: EventSocketHandler? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,7 +31,7 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-     Injector.updateDisplayMetrics(context)
+        Injector.updateDisplayMetrics(context)
 
         findViewById<View>(R.id.btna)!!.setOnClickListener {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
@@ -43,64 +40,36 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.btnb)!!.setOnClickListener {
             val host = findViewById<EditText>(R.id.etb)!!.text.toString()
-            closeConnection()
             connectToHost(host)
         }
 
         findViewById<View>(R.id.main)?.setOnTouchListener { v, event ->
-            sendTouchEvent(event)
+            eventSocketHandler?.writeMotionEvent(event)
             true
         }
-
     }
 
+    private var socket = Socket()
 
-    private var socket: Socket? = null
-    private var outputStream: DataOutputStream? = null
-    private val handlerThread = HandlerThread("").apply {
-        start()
-    }
-    private val handler = Handler(handlerThread.looper)
     private fun connectToHost(host: String) {
         Thread {
             try {
-                socket = Socket().also { socket ->
-                    socket.connect(InetSocketAddress(host, 40000))
-                    Log.d("TAG", "connect:${socket} ")
-                    outputStream = DataOutputStream(socket.getOutputStream())
+                if (!socket.isClosed) {
+                    Log.d("TAG", "socket:close:${socket} ")
+                    socket.close()
                 }
+                socket = Socket()
+                socket.connect(InetSocketAddress(host, 40000))
+                Log.d("TAG", "connect:${socket} ")
+                eventSocketHandler = EventSocketHandler(socket)
             } catch (e: Exception) {
-                closeConnection()
+                Log.d("TAG", "socket:close:${socket} ${e}")
+                if (!socket.isClosed) {
+                    socket.close()
+                }
             }
         }.start()
     }
 
-    private fun sendTouchEvent(event: MotionEvent) {
-        handler.post {
-            try {
-                outputStream?.also { outputStream ->
-                    outputStream.writeInt(2)
-                    outputStream.writeInt(event.action)
-                    outputStream.writeInt(event.getPointerId(event.actionIndex))
-                    outputStream.writeInt(event.getX(event.actionIndex).toInt())
-                    outputStream.writeInt(event.getY(event.actionIndex).toInt())
-                    outputStream.writeInt(Injector.displayMetrics.widthPixels)
-                    outputStream.writeInt(Injector.displayMetrics.heightPixels)
-                    outputStream.writeFloat(event.pressure)
-                    outputStream.writeInt(event.actionButton)
-                    outputStream.writeInt(event.buttonState)
-                    outputStream.flush()
-                }
-            } catch (e: Exception) {
-                closeConnection()
-            }
-        }
-    }
 
-    private fun closeConnection() {
-        outputStream?.close()
-        outputStream = null
-        socket?.close()
-        socket = null
-    }
 }
