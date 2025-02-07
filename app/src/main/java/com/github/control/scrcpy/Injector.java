@@ -1,4 +1,4 @@
-package com.github.control;
+package com.github.control.scrcpy;
 
 import android.content.Context;
 import android.hardware.input.InputManager;
@@ -13,15 +13,11 @@ import androidx.annotation.NonNull;
 
 import java.lang.reflect.Method;
 
-public class TouchEventInjector {
+public class Injector {
     public static DisplayMetrics displayMetrics = new DisplayMetrics();
+    private static Method setActionButtonMethod;
 
-    public static void updateDisplayMetrics(@NonNull Context context) {
-        WindowManager windowManager = context.getSystemService(WindowManager.class);
-        windowManager.getDefaultDisplay().getMetrics(displayMetrics);
-    }
-
-
+    private InjectorDelegate injectorDelegate;
     private long lastTouchDown;
 
     private final PointersState pointersState = new PointersState();
@@ -33,7 +29,7 @@ public class TouchEventInjector {
     // control_msg.h values of the pointerId field in inject_touch_event message
     private static final int POINTER_ID_MOUSE = -1;
 
-    public TouchEventInjector() {
+    public Injector() {
         initPointers();
     }
 
@@ -51,28 +47,18 @@ public class TouchEventInjector {
         }
     }
 
-    private InputEventInjector inputEventInjector;
-
-    public void setInputEventInjector(InputEventInjector inputEventInjector) {
-        this.inputEventInjector = inputEventInjector;
+    public void setInjectorDelegate(InjectorDelegate injectorDelegate) {
+        this.injectorDelegate = injectorDelegate;
     }
 
-    boolean injectInputEvent(MotionEvent inputEvent, int displayId, int injectMode) {
-        if (inputEventInjector != null) {
-            return inputEventInjector.injectInputEvent(inputEvent, displayId, injectMode);
+    public boolean injectInputEvent(MotionEvent inputEvent, int displayId, int injectMode) {
+        if (injectorDelegate != null) {
+            return injectorDelegate.injectInputEvent(inputEvent, displayId, injectMode);
         }
         return false;
     }
 
-
-    Point mapToScreen(Position position) {
-        return new Point(
-                displayMetrics.widthPixels * position.getPoint().getX() / position.getScreenSize().getWidth(),
-                displayMetrics.heightPixels * position.getPoint().getY() / position.getScreenSize().getHeight()
-        );
-    }
-
-    boolean injectTouch(int action, int pointerId, Position position, float pressure, int actionButton, int buttons) {
+    public boolean injectTouch(int action, int pointerId, Position position, float pressure, int actionButton, int buttons) {
         long now = SystemClock.uptimeMillis();
 
         Point point = mapToScreen(position);
@@ -129,16 +115,14 @@ public class TouchEventInjector {
             if (action == MotionEvent.ACTION_DOWN) {
                 if (actionButton == buttons) {
                     // First button pressed: ACTION_DOWN
-                    MotionEvent downEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_DOWN, pointerCount, pointerProperties,
-                            pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
+                    MotionEvent downEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_DOWN, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
                     if (!injectInputEvent(downEvent, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) {
                         return false;
                     }
                 }
 
                 // Any button pressed: ACTION_BUTTON_PRESS
-                MotionEvent pressEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_PRESS, pointerCount, pointerProperties,
-                        pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
+                MotionEvent pressEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_PRESS, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
                 if (!setActionButton(pressEvent, actionButton)) {
                     return false;
                 }
@@ -151,8 +135,7 @@ public class TouchEventInjector {
 
             if (action == MotionEvent.ACTION_UP) {
                 // Any button released: ACTION_BUTTON_RELEASE
-                MotionEvent releaseEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_RELEASE, pointerCount, pointerProperties,
-                        pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
+                MotionEvent releaseEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_RELEASE, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
                 if (!setActionButton(releaseEvent, actionButton)) {
                     return false;
                 }
@@ -162,8 +145,7 @@ public class TouchEventInjector {
 
                 if (buttons == 0) {
                     // Last button released: ACTION_UP
-                    MotionEvent upEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_UP, pointerCount, pointerProperties,
-                            pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
+                    MotionEvent upEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_UP, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
                     if (!injectInputEvent(upEvent, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) {
                         return false;
                     }
@@ -173,12 +155,15 @@ public class TouchEventInjector {
             }
         }
 
-        MotionEvent event = MotionEvent.obtain(lastTouchDown, now, action, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f,
-                DEFAULT_DEVICE_ID, 0, source, 0);
+        MotionEvent event = MotionEvent.obtain(lastTouchDown, now, action, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
         return injectInputEvent(event, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
     }
 
-    private static Method setActionButtonMethod;
+    public Point mapToScreen(@NonNull Position position) {
+        int x = displayMetrics.widthPixels * position.getPoint().getX() / position.getScreenSize().getWidth();
+        int y = displayMetrics.heightPixels * position.getPoint().getY() / position.getScreenSize().getHeight();
+        return new Point(x, y);
+    }
 
     private static Method getSetActionButtonMethod() throws NoSuchMethodException {
         if (setActionButtonMethod == null) {
@@ -196,5 +181,10 @@ public class TouchEventInjector {
             // Cannot set action button on MotionEvent
             return false;
         }
+    }
+
+    public static void updateDisplayMetrics(@NonNull Context context) {
+        WindowManager windowManager = context.getSystemService(WindowManager.class);
+        windowManager.getDefaultDisplay().getMetrics(displayMetrics);
     }
 }

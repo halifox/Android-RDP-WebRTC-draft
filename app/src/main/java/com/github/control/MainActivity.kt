@@ -14,6 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.github.control.scrcpy.Injector
 import java.io.DataOutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -33,7 +34,7 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-     TouchEventInjector.updateDisplayMetrics(context)
+     Injector.updateDisplayMetrics(context)
 
         findViewById<View>(R.id.btna)!!.setOnClickListener {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
@@ -83,8 +84,8 @@ class MainActivity : AppCompatActivity() {
                     outputStream.writeInt(event.getPointerId(event.actionIndex))
                     outputStream.writeInt(event.getX(event.actionIndex).toInt())
                     outputStream.writeInt(event.getY(event.actionIndex).toInt())
-                    outputStream.writeInt(TouchEventInjector.displayMetrics.widthPixels)
-                    outputStream.writeInt(TouchEventInjector.displayMetrics.heightPixels)
+                    outputStream.writeInt(Injector.displayMetrics.widthPixels)
+                    outputStream.writeInt(Injector.displayMetrics.heightPixels)
                     outputStream.writeFloat(event.pressure)
                     outputStream.writeInt(event.actionButton)
                     outputStream.writeInt(event.buttonState)

@@ -1,4 +1,4 @@
-package com.github.control
+package com.github.control.anydesk
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK

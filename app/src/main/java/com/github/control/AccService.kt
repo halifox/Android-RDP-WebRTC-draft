@@ -8,6 +8,10 @@ import android.content.IntentFilter
 import android.util.Log
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
+import com.github.control.anydesk.MotionEventHandler
+import com.github.control.scrcpy.Injector
+import com.github.control.scrcpy.InjectorDelegate
+import com.github.control.scrcpy.Position
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -19,27 +23,27 @@ class AccService : AccessibilityService() {
     private val context = this
     private val coroutineScope = MainScope()
     private val serverSocket = ServerSocket(40000, 1)
-    private val touchEventInjector = TouchEventInjector()
+    private val injector = Injector()
     private val motionEventHandler = MotionEventHandler(this)
 
-    private val inputEventHandlerInterface = object : InputEventInjector {
+    private val delegate = object : InjectorDelegate {
         override fun injectInputEvent(inputEvent: MotionEvent, displayId: Int, injectMode: Int): Boolean {
             motionEventHandler.handleEvent(inputEvent)
             return true
         }
     }
+
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            TouchEventInjector.updateDisplayMetrics(context)
+            Injector.updateDisplayMetrics(context)
         }
     }
-
 
     override fun onCreate() {
         super.onCreate()
         registerReceiver(receiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED))
-        TouchEventInjector.updateDisplayMetrics(context)
-        touchEventInjector.setInputEventInjector(inputEventHandlerInterface)
+        Injector.updateDisplayMetrics(context)
+        injector.setInjectorDelegate(delegate)
         coroutineScope.launch(Dispatchers.IO) {
             while (true) {
                 val socket = serverSocket.accept()
@@ -59,7 +63,7 @@ class AccService : AccessibilityService() {
                             val actionButton = inputStream.readInt()
                             val buttons = inputStream.readInt()
                             val position = Position(x, y, screenWidth, screenHeight)
-                            touchEventInjector.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
+                            injector.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
                         }
                         else -> {}
                     }
@@ -73,6 +77,7 @@ class AccService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        injector.setInjectorDelegate(null)
         coroutineScope.cancel()
         unregisterReceiver(receiver)
     }

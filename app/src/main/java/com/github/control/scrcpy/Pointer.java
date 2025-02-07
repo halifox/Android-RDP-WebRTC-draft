@@ -1,4 +1,4 @@
-package com.github.control;
+package com.github.control.scrcpy;
 
 public class Pointer {
 
