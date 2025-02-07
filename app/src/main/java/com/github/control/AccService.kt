@@ -11,9 +11,7 @@ import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
 import com.genymobile.scrcpy.compat.CoreControllerCompat
 import com.genymobile.scrcpy.compat.InputEventHandler
-import com.genymobile.scrcpy.control.ControlMessage
 import com.genymobile.scrcpy.device.Position
-import com.genymobile.scrcpy.util.Binary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -56,20 +54,20 @@ class AccService : AccessibilityService(), InputEventHandler {
                 while (true) {
                     val type = inputStream.readByte().toInt()
                     when (type) {
-                        ControlMessage.TYPE_INJECT_TOUCH_EVENT -> {
-                            val action = inputStream.readByte().toInt()
-                            val pointerId = inputStream.readLong()
+                        2    -> {
+                            val action = inputStream.readInt()
+                            val pointerId = inputStream.readInt()
                             val x = inputStream.readInt()
                             val y = inputStream.readInt()
-                            val screenWidth = inputStream.readUnsignedShort()
-                            val screenHeight = inputStream.readUnsignedShort()
-                            val position = Position(x, y, screenWidth, screenHeight)
-                            val pressure = Binary.u16FixedPointToFloat(inputStream.readShort())
+                            val screenWidth = inputStream.readInt()
+                            val screenHeight = inputStream.readInt()
+                            val pressure = inputStream.readFloat()
                             val actionButton = inputStream.readInt()
                             val buttons = inputStream.readInt()
+                            val position = Position(x, y, screenWidth, screenHeight)
                             cc.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
                         }
-                        else                                   -> {}
+                        else -> {}
                     }
 
 

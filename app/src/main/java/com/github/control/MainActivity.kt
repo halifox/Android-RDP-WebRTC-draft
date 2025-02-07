@@ -15,8 +15,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.genymobile.scrcpy.compat.CoreControllerCompat
-import com.genymobile.scrcpy.control.ControlMessage
-import com.genymobile.scrcpy.util.Binary
 import java.io.DataOutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -80,14 +78,14 @@ class MainActivity : AppCompatActivity() {
         handler.post {
             try {
                 outputStream?.also { outputStream ->
-                    outputStream.writeByte(ControlMessage.TYPE_INJECT_TOUCH_EVENT)
-                    outputStream.writeByte(event.action)
-                    outputStream.writeLong(event.getPointerId(event.actionIndex).toLong())
+                    outputStream.writeInt(2)
+                    outputStream.writeInt(event.action)
+                    outputStream.writeInt(event.getPointerId(event.actionIndex))
                     outputStream.writeInt(event.getX(event.actionIndex).toInt())
                     outputStream.writeInt(event.getY(event.actionIndex).toInt())
-                    outputStream.writeShort(CoreControllerCompat.displayMetrics.widthPixels)
-                    outputStream.writeShort(CoreControllerCompat.displayMetrics.heightPixels)
-                    outputStream.writeShort(Binary.floatToU16FixedPoint(event.pressure).toInt())
+                    outputStream.writeInt(CoreControllerCompat.displayMetrics.widthPixels)
+                    outputStream.writeInt(CoreControllerCompat.displayMetrics.heightPixels)
+                    outputStream.writeFloat(event.pressure)
                     outputStream.writeInt(event.actionButton)
                     outputStream.writeInt(event.buttonState)
                     outputStream.flush()

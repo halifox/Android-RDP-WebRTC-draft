@@ -43,7 +43,7 @@ public class CC {
         }
     }
 
-    boolean injectTouch(int action, long pointerId, Position position, float pressure, int actionButton, int buttons) {
+    boolean injectTouch(int action, int pointerId, Position position, float pressure, int actionButton, int buttons) {
         long now = SystemClock.uptimeMillis();
 
 
