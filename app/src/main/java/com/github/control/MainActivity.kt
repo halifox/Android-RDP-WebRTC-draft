@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.btna)?.setOnClickListener { openAccessibilitySettings() }
         findViewById<View>(R.id.btnb)?.setOnClickListener { connectToHost() }
-        findViewById<View>(R.id.main)?.setOnTouchListener { _, event ->
+        findViewById<View>(R.id.panel)?.setOnTouchListener { _, event ->
             eventSocketHandler?.writeMotionEvent(event)
             true
         }
