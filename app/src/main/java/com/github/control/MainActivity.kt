@@ -15,65 +15,66 @@ import com.github.control.scrcpy.Injector
 import java.net.InetSocketAddress
 import java.net.Socket
 
-
 @SuppressLint("MissingInflatedId", "ClickableViewAccessibility")
 class MainActivity : AppCompatActivity() {
-    private val context = this
+
     private var eventSocketHandler: EventSocketHandler? = null
+    private var socket = Socket()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)!!) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
 
-        Injector.updateDisplayMetrics(context)
+        setupWindowInsets()
+        Injector.updateDisplayMetrics(this)
 
-        findViewById<View>(R.id.btna)!!.setOnClickListener {
-            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(intent)
-        }
-        findViewById<View>(R.id.btnb)!!.setOnClickListener {
-            val host = findViewById<EditText>(R.id.etb)!!.text.toString()
-            connectToHost(host)
-        }
-
-        findViewById<View>(R.id.main)?.setOnTouchListener { v, event ->
+        findViewById<View>(R.id.btna)?.setOnClickListener { openAccessibilitySettings() }
+        findViewById<View>(R.id.btnb)?.setOnClickListener { connectToHost() }
+        findViewById<View>(R.id.main)?.setOnTouchListener { _, event ->
             eventSocketHandler?.writeMotionEvent(event)
             true
         }
     }
 
-    private var socket = Socket()
+    private fun setupWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)!!) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+    }
 
-    private fun connectToHost(host: String) {
-        Thread {
-            startClient(host)
-        }.start()
+    private fun openAccessibilitySettings() {
+        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        startActivity(intent)
+    }
+
+    private fun connectToHost() {
+        val host = findViewById<EditText>(R.id.etb)?.text.toString()
+        Thread { startClient(host) }.start()
     }
 
     private fun startClient(host: String) {
         try {
-            if (!socket.isClosed) {
-                Log.d("TAG", "socket:close:${socket} ")
-                socket.close()
+            closeSocketIfOpen()
+            socket = Socket().apply {
+                connect(InetSocketAddress(host, 40000))
             }
-            socket = Socket()
-            socket.connect(InetSocketAddress(host, 40000))
-            Log.d("TAG", "connect:${socket} ")
+            Log.d("TAG", "Connected: $socket")
             eventSocketHandler = EventSocketHandler(socket)
         } catch (e: Exception) {
-            Log.d("TAG", "socket:close:${socket} ${e}")
-            if (!socket.isClosed) {
-                socket.close()
-            }
+            Log.d("TAG", "Socket error: ${e.message}")
+            closeSocketIfOpen()
         }
     }
 
-
+    private fun closeSocketIfOpen() {
+        if (!socket.isClosed) {
+            socket.close()
+            Log.d("TAG", "Socket closed: $socket")
+        }
+    }
 }
