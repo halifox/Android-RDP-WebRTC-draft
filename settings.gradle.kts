@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "control"
 include(":app")
-include(":scrcpy")
+//include(":scrcpy")

@@ -14,7 +14,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.genymobile.scrcpy.compat.CoreControllerCompat
 import java.io.DataOutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -22,7 +21,7 @@ import java.net.Socket
 
 @SuppressLint("MissingInflatedId", "ClickableViewAccessibility")
 class MainActivity : AppCompatActivity() {
-
+    val context = this
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,7 +32,8 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        CoreControllerCompat.updateDisplayMetrics(this)
+
+     TouchEventInjector.updateDisplayMetrics(context)
 
         findViewById<View>(R.id.btna)!!.setOnClickListener {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
@@ -83,8 +83,8 @@ class MainActivity : AppCompatActivity() {
                     outputStream.writeInt(event.getPointerId(event.actionIndex))
                     outputStream.writeInt(event.getX(event.actionIndex).toInt())
                     outputStream.writeInt(event.getY(event.actionIndex).toInt())
-                    outputStream.writeInt(CoreControllerCompat.displayMetrics.widthPixels)
-                    outputStream.writeInt(CoreControllerCompat.displayMetrics.heightPixels)
+                    outputStream.writeInt(TouchEventInjector.displayMetrics.widthPixels)
+                    outputStream.writeInt(TouchEventInjector.displayMetrics.heightPixels)
                     outputStream.writeFloat(event.pressure)
                     outputStream.writeInt(event.actionButton)
                     outputStream.writeInt(event.buttonState)

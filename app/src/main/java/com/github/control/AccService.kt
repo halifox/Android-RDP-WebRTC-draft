@@ -6,12 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
-import android.view.InputEvent
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
-import com.genymobile.scrcpy.compat.CoreControllerCompat
-import com.genymobile.scrcpy.compat.InputEventHandler
-import com.genymobile.scrcpy.device.Position
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -19,24 +15,22 @@ import kotlinx.coroutines.launch
 import java.io.DataInputStream
 import java.net.ServerSocket
 
-class AccService : AccessibilityService(), InputEventHandler {
+class AccService : AccessibilityService() {
     private val context = this
     private val coroutineScope = MainScope()
     private val serverSocket = ServerSocket(40000, 1)
-    private val cc = CC()
+    private val touchEventInjector = TouchEventInjector()
     private val motionEventHandler = MotionEventHandler(this)
 
-    private val inputEventHandlerInterface = object : InputEventHandler {
-        override fun injectInputEvent(inputEvent: InputEvent?, injectMode: Int): Boolean {
-            if (inputEvent is MotionEvent) {
-                motionEventHandler.handleEvent(inputEvent)
-            }
+    private val inputEventHandlerInterface = object : InputEventInjector {
+        override fun injectInputEvent(inputEvent: MotionEvent, displayId: Int, injectMode: Int): Boolean {
+            motionEventHandler.handleEvent(inputEvent)
             return true
         }
     }
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            CoreControllerCompat.updateDisplayMetrics(context)
+            TouchEventInjector.updateDisplayMetrics(context)
         }
     }
 
@@ -44,8 +38,8 @@ class AccService : AccessibilityService(), InputEventHandler {
     override fun onCreate() {
         super.onCreate()
         registerReceiver(receiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED))
-        CoreControllerCompat.updateDisplayMetrics(context)
-        CoreControllerCompat.inputEventHandlerInterface = inputEventHandlerInterface
+        TouchEventInjector.updateDisplayMetrics(context)
+        touchEventInjector.setInputEventInjector(inputEventHandlerInterface)
         coroutineScope.launch(Dispatchers.IO) {
             while (true) {
                 val socket = serverSocket.accept()
@@ -65,7 +59,7 @@ class AccService : AccessibilityService(), InputEventHandler {
                             val actionButton = inputStream.readInt()
                             val buttons = inputStream.readInt()
                             val position = Position(x, y, screenWidth, screenHeight)
-                            cc.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
+                            touchEventInjector.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
                         }
                         else -> {}
                     }

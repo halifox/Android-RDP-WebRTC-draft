@@ -67,7 +67,7 @@ public final class Device {
             return false;
         }
 
-        return CoreControllerCompat.INSTANCE.injectInputEvent(inputEvent, injectMode);
+        return CoreControllerCompat.INSTANCE.injectInputEvent(inputEvent, displayId,injectMode);
     }
 
     public static boolean injectKeyEvent(int action, int keyCode, int repeat, int metaState, int displayId, int injectMode) {

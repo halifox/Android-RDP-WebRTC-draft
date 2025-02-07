@@ -10,7 +10,7 @@ import com.genymobile.scrcpy.device.Point
 import com.genymobile.scrcpy.device.Position
 
 interface InputEventHandler {
-    fun injectInputEvent(inputEvent: InputEvent?, injectMode: Int): Boolean = false
+    fun injectInputEvent(inputEvent: InputEvent?,displayId:Int, injectMode: Int): Boolean = false
 }
 
 object CoreControllerCompat : InputEventHandler {
@@ -20,12 +20,13 @@ object CoreControllerCompat : InputEventHandler {
     fun updateDisplayMetrics(context: Context) {
         val windowManager = ContextCompat.getSystemService(context, WindowManager::class.java) ?: return
         windowManager.defaultDisplay.getMetrics(displayMetrics)
+        windowManager.defaultDisplay.getMetrics(displayMetrics)
         Log.d("CoreControllerCompat", "displayMetrics:${displayMetrics.widthPixels} ${displayMetrics.heightPixels}")
     }
 
 
-    override fun injectInputEvent(inputEvent: InputEvent?, injectMode: Int): Boolean {
-        return inputEventHandlerInterface.injectInputEvent(inputEvent, injectMode) ?: false
+    override fun injectInputEvent(inputEvent: InputEvent?, displayId: Int, injectMode: Int): Boolean {
+        return inputEventHandlerInterface.injectInputEvent(inputEvent,displayId, injectMode) ?: false
     }
 
     fun mapToScreen(position: Position): Point {

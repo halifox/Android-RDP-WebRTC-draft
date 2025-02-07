@@ -1,31 +1,39 @@
 package com.github.control;
 
+import android.content.Context;
+import android.hardware.input.InputManager;
 import android.os.Build;
 import android.os.SystemClock;
+import android.util.DisplayMetrics;
 import android.view.InputDevice;
 import android.view.MotionEvent;
+import android.view.WindowManager;
 
-import com.genymobile.scrcpy.AndroidVersions;
-import com.genymobile.scrcpy.compat.CoreControllerCompat;
-import com.genymobile.scrcpy.control.Pointer;
-import com.genymobile.scrcpy.control.PointersState;
-import com.genymobile.scrcpy.device.Device;
-import com.genymobile.scrcpy.device.Point;
-import com.genymobile.scrcpy.device.Position;
-import com.genymobile.scrcpy.util.Ln;
-import com.genymobile.scrcpy.wrappers.InputManager;
+import androidx.annotation.NonNull;
 
-public class CC {
+import java.lang.reflect.Method;
+
+public class TouchEventInjector {
+    public static DisplayMetrics displayMetrics = new DisplayMetrics();
+
+    public static void updateDisplayMetrics(@NonNull Context context) {
+        WindowManager windowManager = context.getSystemService(WindowManager.class);
+        windowManager.getDefaultDisplay().getMetrics(displayMetrics);
+    }
+
+
     private long lastTouchDown;
+
     private final PointersState pointersState = new PointersState();
     private final MotionEvent.PointerProperties[] pointerProperties = new MotionEvent.PointerProperties[PointersState.MAX_POINTERS];
     private final MotionEvent.PointerCoords[] pointerCoords = new MotionEvent.PointerCoords[PointersState.MAX_POINTERS];
+
     private static final int DEFAULT_DEVICE_ID = 0;
 
     // control_msg.h values of the pointerId field in inject_touch_event message
     private static final int POINTER_ID_MOUSE = -1;
 
-    public CC() {
+    public TouchEventInjector() {
         initPointers();
     }
 
@@ -43,16 +51,36 @@ public class CC {
         }
     }
 
+    private InputEventInjector inputEventInjector;
+
+    public void setInputEventInjector(InputEventInjector inputEventInjector) {
+        this.inputEventInjector = inputEventInjector;
+    }
+
+    boolean injectInputEvent(MotionEvent inputEvent, int displayId, int injectMode) {
+        if (inputEventInjector != null) {
+            return inputEventInjector.injectInputEvent(inputEvent, displayId, injectMode);
+        }
+        return false;
+    }
+
+
+    Point mapToScreen(Position position) {
+        return new Point(
+                displayMetrics.widthPixels * position.getPoint().getX() / position.getScreenSize().getWidth(),
+                displayMetrics.heightPixels * position.getPoint().getY() / position.getScreenSize().getHeight()
+        );
+    }
+
     boolean injectTouch(int action, int pointerId, Position position, float pressure, int actionButton, int buttons) {
         long now = SystemClock.uptimeMillis();
 
-
-        Point point = CoreControllerCompat.INSTANCE.mapToScreen(position);
+        Point point = mapToScreen(position);
         int targetDisplayId = 0;
 
         int pointerIndex = pointersState.getPointerIndex(pointerId);
         if (pointerIndex == -1) {
-            Ln.w("Too many pointers for touch event");
+            // Too many pointers for touch event
             return false;
         }
         Pointer pointer = pointersState.get(pointerIndex);
@@ -97,13 +125,13 @@ public class CC {
          *
          * Otherwise, Chrome does not work properly: <https://github.com/Genymobile/scrcpy/issues/3635>
          */
-        if (Build.VERSION.SDK_INT >= AndroidVersions.API_23_ANDROID_6_0 && source == InputDevice.SOURCE_MOUSE) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && source == InputDevice.SOURCE_MOUSE) {
             if (action == MotionEvent.ACTION_DOWN) {
                 if (actionButton == buttons) {
                     // First button pressed: ACTION_DOWN
                     MotionEvent downEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_DOWN, pointerCount, pointerProperties,
                             pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
-                    if (!Device.injectEvent(downEvent, targetDisplayId, Device.INJECT_MODE_ASYNC)) {
+                    if (!injectInputEvent(downEvent, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) {
                         return false;
                     }
                 }
@@ -111,10 +139,10 @@ public class CC {
                 // Any button pressed: ACTION_BUTTON_PRESS
                 MotionEvent pressEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_PRESS, pointerCount, pointerProperties,
                         pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
-                if (!InputManager.setActionButton(pressEvent, actionButton)) {
+                if (!setActionButton(pressEvent, actionButton)) {
                     return false;
                 }
-                if (!Device.injectEvent(pressEvent, targetDisplayId, Device.INJECT_MODE_ASYNC)) {
+                if (!injectInputEvent(pressEvent, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) {
                     return false;
                 }
 
@@ -125,10 +153,10 @@ public class CC {
                 // Any button released: ACTION_BUTTON_RELEASE
                 MotionEvent releaseEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_RELEASE, pointerCount, pointerProperties,
                         pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
-                if (!InputManager.setActionButton(releaseEvent, actionButton)) {
+                if (!setActionButton(releaseEvent, actionButton)) {
                     return false;
                 }
-                if (!Device.injectEvent(releaseEvent, targetDisplayId, Device.INJECT_MODE_ASYNC)) {
+                if (!injectInputEvent(releaseEvent, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) {
                     return false;
                 }
 
@@ -136,7 +164,7 @@ public class CC {
                     // Last button released: ACTION_UP
                     MotionEvent upEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_UP, pointerCount, pointerProperties,
                             pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
-                    if (!Device.injectEvent(upEvent, targetDisplayId, Device.INJECT_MODE_ASYNC)) {
+                    if (!injectInputEvent(upEvent, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) {
                         return false;
                     }
                 }
@@ -147,6 +175,26 @@ public class CC {
 
         MotionEvent event = MotionEvent.obtain(lastTouchDown, now, action, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f,
                 DEFAULT_DEVICE_ID, 0, source, 0);
-        return Device.injectEvent(event, targetDisplayId, Device.INJECT_MODE_ASYNC);
+        return injectInputEvent(event, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
+    }
+
+    private static Method setActionButtonMethod;
+
+    private static Method getSetActionButtonMethod() throws NoSuchMethodException {
+        if (setActionButtonMethod == null) {
+            setActionButtonMethod = MotionEvent.class.getMethod("setActionButton", int.class);
+        }
+        return setActionButtonMethod;
+    }
+
+    public static boolean setActionButton(MotionEvent motionEvent, int actionButton) {
+        try {
+            Method method = getSetActionButtonMethod();
+            method.invoke(motionEvent, actionButton);
+            return true;
+        } catch (ReflectiveOperationException e) {
+            // Cannot set action button on MotionEvent
+            return false;
+        }
     }
 }
