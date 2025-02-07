@@ -68,6 +68,7 @@ class AccService : AccessibilityService() {
                 executor.execute {
                     Log.d("TAG", "Starting handler loop for socket: ${socket.inetAddress.hostAddress}:${socket.port}")
                     handler.loopRecv()
+                    Log.d("TAG", "Finish handler loop for socket: ${socket.inetAddress.hostAddress}:${socket.port}")
                 }
             }
         } catch (e: Exception) {
