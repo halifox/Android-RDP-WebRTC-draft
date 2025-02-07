@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.provider.Settings
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.EditText
@@ -66,6 +67,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 socket = Socket().also { socket ->
                     socket.connect(InetSocketAddress(host, 40000))
+                    Log.d("TAG", "connect:${socket} ")
                     outputStream = DataOutputStream(socket.getOutputStream())
                 }
             } catch (e: Exception) {
