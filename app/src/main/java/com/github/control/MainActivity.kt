@@ -53,22 +53,26 @@ class MainActivity : AppCompatActivity() {
 
     private fun connectToHost(host: String) {
         Thread {
-            try {
-                if (!socket.isClosed) {
-                    Log.d("TAG", "socket:close:${socket} ")
-                    socket.close()
-                }
-                socket = Socket()
-                socket.connect(InetSocketAddress(host, 40000))
-                Log.d("TAG", "connect:${socket} ")
-                eventSocketHandler = EventSocketHandler(socket)
-            } catch (e: Exception) {
-                Log.d("TAG", "socket:close:${socket} ${e}")
-                if (!socket.isClosed) {
-                    socket.close()
-                }
-            }
+            startClient(host)
         }.start()
+    }
+
+    private fun startClient(host: String) {
+        try {
+            if (!socket.isClosed) {
+                Log.d("TAG", "socket:close:${socket} ")
+                socket.close()
+            }
+            socket = Socket()
+            socket.connect(InetSocketAddress(host, 40000))
+            Log.d("TAG", "connect:${socket} ")
+            eventSocketHandler = EventSocketHandler(socket)
+        } catch (e: Exception) {
+            Log.d("TAG", "socket:close:${socket} ${e}")
+            if (!socket.isClosed) {
+                socket.close()
+            }
+        }
     }
 
 

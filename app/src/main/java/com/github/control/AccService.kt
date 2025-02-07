@@ -5,17 +5,22 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.util.Log
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
 import com.github.control.anydesk.MotionEventHandler
 import com.github.control.scrcpy.Injector
 import com.github.control.scrcpy.InjectorDelegate
 import java.net.ServerSocket
+import java.util.concurrent.Executors
+
 
 class AccService : AccessibilityService() {
     private val context = this
     private val injector = Injector()
     private val motionEventHandler = MotionEventHandler(this)
+
+    private val executor = Executors.newCachedThreadPool()
 
     private val delegate = object : InjectorDelegate {
         override fun injectInputEvent(inputEvent: MotionEvent, displayId: Int, injectMode: Int): Boolean {
@@ -35,27 +40,30 @@ class AccService : AccessibilityService() {
         registerReceiver(receiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED))
         Injector.updateDisplayMetrics(context)
         injector.setInjectorDelegate(delegate)
-        thread.start()
+
+        executor.execute(::startServer)
+    }
+
+    private fun startServer() {
+        try {
+            val serverSocket = ServerSocket(40000, 1)
+            while (true) {
+                val socket = serverSocket.accept()
+                Log.d("TAG", "accept:${socket} ")
+                val handler = EventSocketHandler(socket, injector)
+                executor.execute(handler::loopRecv)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
 
     override fun onDestroy() {
         super.onDestroy()
-        thread.interrupt()
         injector.setInjectorDelegate(null)
         unregisterReceiver(receiver)
-    }
-
-    private val serverSocket = ServerSocket(40000, 1)
-
-    private val thread = Thread {
-        while (true) {
-            kotlin.runCatching {
-                serverSocket.accept()
-            }.onSuccess { socket ->
-                EventSocketHandler(socket, injector)
-            }
-        }
+        executor.shutdown()
     }
 
 

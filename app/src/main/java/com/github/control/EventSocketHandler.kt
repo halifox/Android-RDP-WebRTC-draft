@@ -1,7 +1,5 @@
 package com.github.control
 
-import android.os.Handler
-import android.os.HandlerThread
 import android.view.MotionEvent
 import com.github.control.scrcpy.Injector
 import com.github.control.scrcpy.Position
@@ -12,33 +10,33 @@ import java.io.EOFException
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.Socket
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
 
 class EventSocketHandler(
-    val inputStream: DataInputStream,
-    val outputStream: DataOutputStream,
-    val injector: Injector? = null,
+    private val inputStream: DataInputStream,
+    private val outputStream: DataOutputStream,
+    private val injector: Injector? = null,
+    private val singleWriterExecutor: ExecutorService = Executors.newSingleThreadExecutor(),
 ) : Closeable {
     companion object {
-        const val TYPE_MOTION_EVENT = 2
+        private const val TYPE_MOTION_EVENT = 2
     }
 
-    constructor(socket: Socket, injector: Injector? = null) : this(DataInputStream(socket.inputStream), DataOutputStream(socket.outputStream), injector)
+    constructor(
+        socket: Socket,
+        injector: Injector? = null,
+    ) : this(
+        DataInputStream(socket.inputStream),
+        DataOutputStream(socket.outputStream),
+        injector,
+    )
 
-    private val thread = Thread {
-        loopRecv()
-    }.apply {
-        start()
-    }
-
-    private val a = HandlerThread("").apply {
-        start()
-    }
-    private val h = Handler(a.looper)
 
     override fun close() {
         inputStream.close()
         outputStream.close()
-        thread.interrupt()
     }
 
     private fun recv() {
@@ -49,7 +47,7 @@ class EventSocketHandler(
         }
     }
 
-    private fun loopRecv() {
+    fun loopRecv() {
         try {
             while (true) {
                 recv()
@@ -90,7 +88,7 @@ class EventSocketHandler(
 
 
     fun writeMotionEvent(event: MotionEvent) {
-        h.post {
+        singleWriterExecutor.execute {
             outputStream.writeInt(TYPE_MOTION_EVENT)
             outputStream.writeInt(event.action)
             outputStream.writeInt(event.getPointerId(event.actionIndex))
