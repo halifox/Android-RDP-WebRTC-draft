@@ -40,22 +40,7 @@ class AccService : AccessibilityService() {
         registerReceiver(receiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED))
         Injector.updateDisplayMetrics(context)
         injector.setInjectorDelegate(delegate)
-
         executor.execute(::startServer)
-    }
-
-    private fun startServer() {
-        try {
-            val serverSocket = ServerSocket(40000, 1)
-            while (true) {
-                val socket = serverSocket.accept()
-                Log.d("TAG", "accept:${socket} ")
-                val handler = EventSocketHandler(socket, injector)
-                executor.execute(handler::loopRecv)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 
 
@@ -64,6 +49,20 @@ class AccService : AccessibilityService() {
         injector.setInjectorDelegate(null)
         unregisterReceiver(receiver)
         executor.shutdown()
+    }
+
+    private fun startServer() {
+        try {
+            val serverSocket = ServerSocket(40000, 1)
+            while (true) {
+                val socket = serverSocket.accept()
+                Log.d("TAG", "accept:${socket} ")
+                val handler = EventSocketHandler(socket, injector = injector)
+                executor.execute(handler::loopRecv)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
 

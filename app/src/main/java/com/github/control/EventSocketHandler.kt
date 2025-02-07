@@ -15,8 +15,9 @@ import java.util.concurrent.Executors
 
 
 class EventSocketHandler(
-    private val inputStream: DataInputStream,
-    private val outputStream: DataOutputStream,
+    private val socket: Socket,
+    private val inputStream: DataInputStream = DataInputStream(socket.inputStream),
+    private val outputStream: DataOutputStream = DataOutputStream(socket.outputStream),
     private val injector: Injector? = null,
     private val singleWriterExecutor: ExecutorService = Executors.newSingleThreadExecutor(),
 ) : Closeable {
@@ -24,28 +25,18 @@ class EventSocketHandler(
         private const val TYPE_MOTION_EVENT = 2
     }
 
-    constructor(
-        socket: Socket,
-        injector: Injector? = null,
-    ) : this(
-        DataInputStream(socket.inputStream),
-        DataOutputStream(socket.outputStream),
-        injector,
-    )
-
-
     override fun close() {
-        inputStream.close()
-        outputStream.close()
-    }
-
-    private fun recv() {
-        val type = inputStream.readInt()
-        when (type) {
-            TYPE_MOTION_EVENT -> readMotionEvent()
-            else              -> {}
+        kotlin.runCatching {
+            inputStream.close()
+        }
+        kotlin.runCatching {
+            outputStream.close()
+        }
+        kotlin.runCatching {
+            socket.close()
         }
     }
+
 
     fun loopRecv() {
         try {
@@ -70,8 +61,15 @@ class EventSocketHandler(
         }
     }
 
+    fun recv() {
+        val type = inputStream.readInt()
+        when (type) {
+            TYPE_MOTION_EVENT -> readMotionEvent()
+            else              -> {}
+        }
+    }
 
-    fun readMotionEvent() {
+    private fun readMotionEvent() {
         //val type = inputStream.readInt()//TYPE_MOTION_EVENT
         val action = inputStream.readInt()
         val pointerId = inputStream.readInt()
@@ -85,7 +83,6 @@ class EventSocketHandler(
         val position = Position(x, y, screenWidth, screenHeight)
         injector?.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
     }
-
 
     fun writeMotionEvent(event: MotionEvent) {
         singleWriterExecutor.execute {
