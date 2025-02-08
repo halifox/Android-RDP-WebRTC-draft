@@ -61,7 +61,8 @@ class ControlService : AccessibilityService() {
             println("Server is listening at ${serverSocket.localAddress}")
             while (true) {
                 val socket = serverSocket.accept()
-                println("accept ${socket.remoteAddress}")
+                val socketAddress = socket.remoteAddress
+                println("accept $socketAddress")
                 launch(Dispatchers.IO) {
                     try {
                         val inputStream = socket.openReadChannel()
@@ -71,7 +72,7 @@ class ControlService : AccessibilityService() {
                     } catch (e: Throwable) {
                         socket.close()
                     } finally {
-                        println("close ${socket.remoteAddress}")
+                        println("close $socketAddress")
                     }
                 }
             }

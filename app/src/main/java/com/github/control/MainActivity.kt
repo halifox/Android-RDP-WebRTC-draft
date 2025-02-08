@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.ProgressDialog
 import android.content.Intent
 import android.os.Bundle
+import android.os.Process
 import android.provider.Settings
 import android.view.MotionEvent
 import android.view.View
@@ -20,7 +21,6 @@ import io.ktor.utils.io.writeInt
 import io.ktor.utils.io.writeShort
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
@@ -76,6 +76,12 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         progressDialog.dismiss()
         selectorManager.close()
+        println("onDestroy")
+    }
+
+    override fun onBackPressed() {
+        super.onBackPressed()
+        Process.killProcess(Process.myPid())
     }
 
 
