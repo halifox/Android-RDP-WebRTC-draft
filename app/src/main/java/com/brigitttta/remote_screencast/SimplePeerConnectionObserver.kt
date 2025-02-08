@@ -2,7 +2,7 @@ package com.brigitttta.remote_screencast
 
 import org.webrtc.*
 
-open class SimplePeerConnectionObserver(private val TAG: String) : PeerConnection.Observer {
+open class SimplePeerConnectionObserver() : PeerConnection.Observer {
     override fun onSignalingChange(state: PeerConnection.SignalingState) {
 
     }

@@ -21,11 +21,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        findViewById<Button>(R.id.btn_push_mediaProjectionManager_service).setOnClickListener {
+        findViewById<Button>(R.id.push).setOnClickListener {
             registerMediaProjectionPermission.launch(getSystemService<MediaProjectionManager>()?.createScreenCaptureIntent())
         }
 
-        findViewById<Button>(R.id.btn_pull).setOnClickListener {
+        findViewById<Button>(R.id.pull).setOnClickListener {
             startActivity(Intent(this, PullActivity::class.java))
         }
     }

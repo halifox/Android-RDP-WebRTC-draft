@@ -5,10 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjection
 import android.os.IBinder
-import android.os.SystemClock
 import android.util.Size
 import android.view.InputEvent
-import android.view.MotionEvent
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationChannelGroupCompat
 import androidx.core.app.NotificationCompat
@@ -122,7 +120,7 @@ class PushByMediaProjectionManagerService : Service() {
                                                 }
 
                                                 //创建对等连接
-                                                peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver("push") {
+                                                peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver() {
                                                     override fun onIceCandidate(iceCandidate: IceCandidate) {
                                                         //发送 连接两端的主机的网络地址
                                                         ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.ICE, iceCandidate = iceCandidate).toString())
@@ -130,9 +128,9 @@ class PushByMediaProjectionManagerService : Service() {
                                                 })
 
                                                 peerConnection?.addTrack(videoTrack)
-                                                peerConnection?.createOffer(object : SimpleSdpObserver("push-createOffer") {
+                                                peerConnection?.createOffer(object : SimpleSdpObserver() {
                                                     override fun onCreateSuccess(description: SessionDescription) {
-                                                        peerConnection?.setLocalDescription(SimpleSdpObserver("push-setLocalDescription"), description)
+                                                        peerConnection?.setLocalDescription(SimpleSdpObserver(), description)
                                                         ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SDP, description = description).toString())
                                                     }
                                                 }, MediaConstraints())
@@ -149,11 +147,11 @@ class PushByMediaProjectionManagerService : Service() {
                                                 when (webrtcMessage.type) {
                                                     WebrtcMessage.Type.SDP -> {
                                                         // 接收远端sdp并将自身sdp发送给远端完成sdp交换
-                                                        peerConnection?.setRemoteDescription(SimpleSdpObserver("pull-setRemoteDescription"), webrtcMessage.description)
+                                                        peerConnection?.setRemoteDescription(SimpleSdpObserver(), webrtcMessage.description)
                                                         // 只有设置了远端sdp才能createAnswer
-                                                        peerConnection?.createAnswer(object : SimpleSdpObserver("pull-createAnswer") {
+                                                        peerConnection?.createAnswer(object : SimpleSdpObserver() {
                                                             override fun onCreateSuccess(description: SessionDescription) {
-                                                                peerConnection?.setLocalDescription(SimpleSdpObserver("pull-setLocalDescription"), description)
+                                                                peerConnection?.setLocalDescription(SimpleSdpObserver(), description)
                                                                 ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SDP, description = description).toString())
                                                             }
                                                         }, MediaConstraints())
