@@ -54,7 +54,7 @@ class PullFragment : Fragment() {
     }
 
     private fun initData() {
-        inetHost = requireArguments().getString(INET_HOST, "192.168.1.100")
+        inetHost = requireArguments().getString(INET_HOST, "192.168.137.74")
         inetPort = requireArguments().getInt(INET_PORT, 8888)
     }
 
