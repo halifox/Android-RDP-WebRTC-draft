@@ -12,7 +12,7 @@ import androidx.core.content.getSystemService
 class MainActivity : AppCompatActivity() {
     val registerMediaProjectionPermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         if (it.resultCode == RESULT_OK) {
-            PushByMediaProjectionManagerService.start(this, it.data)
+            ScreenCaptureService.start(this, it.data)
         }
     }
 

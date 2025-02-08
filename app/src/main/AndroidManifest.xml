@@ -55,7 +55,7 @@
             android:name=".MediaProjectionForegroundService"
             android:foregroundServiceType="mediaProjection" />
         <service
-            android:name=".PushByMediaProjectionManagerService"
+            android:name=".ScreenCaptureService"
             android:foregroundServiceType="mediaProjection" />
     </application>
 

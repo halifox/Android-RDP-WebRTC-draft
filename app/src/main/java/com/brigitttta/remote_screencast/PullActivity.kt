@@ -7,6 +7,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.updateLayoutParams
+import com.brigitttta.remote_screencast.databinding.ActivityPullBinding
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
@@ -28,6 +29,7 @@ import org.webrtc.audio.JavaAudioDeviceModule
 
 
 class PullActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityPullBinding
     private val mainScope = MainScope()
     private var eventLoopGroup: NioEventLoopGroup? = null
     private var inetHost = "192.168.137.150"
@@ -38,33 +40,16 @@ class PullActivity : AppCompatActivity() {
     //EglBase
     private val eglBase = EglBase.create()
     private val eglBaseContext = eglBase.getEglBaseContext()
-    private lateinit var surfaceViewRenderer: SurfaceViewRenderer
 
-//    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-//        return inflater.inflate(R.layout.fragment_pull, container, false)
-//    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.fragment_pull)
-        surfaceViewRenderer = findViewById<SurfaceViewRenderer>(R.id.srv)
-        surfaceViewRenderer.init(eglBaseContext, null)
-//        initData()
+        binding = ActivityPullBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        binding.SurfaceViewRenderer.init(eglBaseContext, null)
         initService()
     }
 
-//    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-//        super.onViewCreated(view, savedInstanceState)
-//        surfaceViewRenderer = view.findViewById<SurfaceViewRenderer>(R.id.srv)
-//        surfaceViewRenderer.init(eglBaseContext, null)
-//        initData()
-//        initService()
-//    }
-
-//    private fun initData() {
-//        inetHost = requireArguments().getString(INET_HOST, "192.168.137.74")
-//        inetPort = requireArguments().getInt(INET_PORT, 8888)
-//    }
 
 
     private fun initService() {
@@ -128,7 +113,7 @@ class PullActivity : AppCompatActivity() {
                                                 val track = rtpReceiver.track()
                                                 when (track) {
                                                     is VideoTrack -> {
-                                                        track.addSink(surfaceViewRenderer)
+                                                        track.addSink(binding.SurfaceViewRenderer)
                                                     }
                                                 }
                                             }
@@ -144,7 +129,7 @@ class PullActivity : AppCompatActivity() {
                                     //信道不活跃消息
                                     override fun channelInactive(ctx: ChannelHandlerContext?) {
                                         super.channelInactive(ctx)
-                                        surfaceViewRenderer.clearImage()
+                                        binding.SurfaceViewRenderer.clearImage()
                                         peerConnection?.dispose()
                                         peerConnection = null
                                     }
@@ -167,7 +152,7 @@ class PullActivity : AppCompatActivity() {
                                             }
                                             WebrtcMessage.Type.SIZE -> {
                                                 launch(Dispatchers.Main) {
-                                                    surfaceViewRenderer.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                                                    binding.SurfaceViewRenderer.updateLayoutParams<ConstraintLayout.LayoutParams> {
                                                         dimensionRatio = "${webrtcMessage.size?.width}:${webrtcMessage.size?.height}"
                                                     }
                                                 }
@@ -202,8 +187,8 @@ class PullActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "onDestroy: ")
-        surfaceViewRenderer.clearImage()
-        surfaceViewRenderer.release()
+        binding.SurfaceViewRenderer.clearImage()
+        binding.SurfaceViewRenderer.release()
         eglBase.release()
         eventLoopGroup?.shutdownGracefully()
         mainScope.cancel()
