@@ -49,6 +49,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
 
-    val ktor_version = "3.0.3"
-    implementation("io.ktor:ktor-network:$ktor_version")
+    implementation("io.ktor:ktor-network:3.0.3")
+    implementation("io.getstream:stream-webrtc-android:1.3.7")
+    implementation ("com.blankj:utilcodex:1.31.0")
 }

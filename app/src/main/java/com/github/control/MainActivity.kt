@@ -4,11 +4,13 @@ import android.accessibilityservice.AccessibilityService
 import android.annotation.SuppressLint
 import android.app.ProgressDialog
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.os.Process
 import android.provider.Settings
 import android.view.MotionEvent
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -26,6 +28,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
 
 @SuppressLint("MissingInflatedId", "ClickableViewAccessibility")
 class MainActivity : AppCompatActivity() {
@@ -82,13 +85,23 @@ class MainActivity : AppCompatActivity() {
         binding.recents.setOnClickListener {
             actionChannel.trySend(AccessibilityService.GLOBAL_ACTION_RECENTS)
         }
+
+        val mediaProjectionManager = getSystemService(MediaProjectionManager::class.java)!!
+        screenCaptureLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
+    }
+
+
+    private val screenCaptureLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (it.resultCode == RESULT_OK && it.data != null) {
+            ScreenCaptureService.start(context, it.data)
+        }
     }
 
     override fun onDestroy() {
+        ScreenCaptureService.stop(context)
         super.onDestroy()
         progressDialog.dismiss()
         selectorManager.close()
-        println("onDestroy")
     }
 
     override fun onBackPressed() {
@@ -113,7 +126,8 @@ class MainActivity : AppCompatActivity() {
     private fun startClient(host: String) {
         lifecycleScope.launch(Dispatchers.IO + coroutineExceptionHandler) {
             withContext(Dispatchers.Main) { progressDialog.show() }
-            val socket = aSocket(selectorManager).tcp().connect(host, 40000)
+            val socket = aSocket(selectorManager).tcp()
+                .connect(host, 40000)
             withContext(Dispatchers.Main) {
                 progressDialog.hide()
                 binding.slave.visibility = View.GONE
@@ -128,8 +142,14 @@ class MainActivity : AppCompatActivity() {
                     byteWriteChannel.writeInt(ControlService.TYPE_MOTION_EVENT)
                     byteWriteChannel.writeInt(event.action)
                     byteWriteChannel.writeInt(event.getPointerId(event.actionIndex))
-                    byteWriteChannel.writeInt(event.getX(event.actionIndex).toInt())
-                    byteWriteChannel.writeInt(event.getY(event.actionIndex).toInt())
+                    byteWriteChannel.writeInt(
+                        event.getX(event.actionIndex)
+                            .toInt()
+                    )
+                    byteWriteChannel.writeInt(
+                        event.getY(event.actionIndex)
+                            .toInt()
+                    )
                     byteWriteChannel.writeInt(Controller.displayMetrics.widthPixels)
                     byteWriteChannel.writeInt(Controller.displayMetrics.heightPixels)
                     byteWriteChannel.writeShort(Binary.floatToI16FixedPoint(event.pressure))
@@ -148,4 +168,5 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
 }
