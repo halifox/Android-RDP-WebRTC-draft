@@ -81,13 +81,6 @@ class PullFragment : Fragment() {
                                     //信道激活消息
                                     override fun channelActive(ctx: ChannelHandlerContext?) {
                                         super.channelActive(ctx)
-                                        launch(Dispatchers.Main) {
-                                            surfaceViewRenderer.setOnTouchListener { v, event ->
-                                                val motionModel = MotionModel(event, v.width, v.height)
-                                                ctx?.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.MOVE, motionModel = motionModel).toString())
-                                                return@setOnTouchListener true
-                                            }
-                                        }
 
 
                                         //初始化

@@ -163,24 +163,6 @@ class PushByMediaProjectionManagerService : Service() {
                                                         // 发送在PeerConnectionFactory.createPeerConnection.onIceCandidate(iceCandidate: IceCandidate)
                                                         peerConnection?.addIceCandidate(webrtcMessage.iceCandidate)
                                                     }
-                                                    WebrtcMessage.Type.MOVE -> {
-                                                        // 注入触摸事件
-                                                        runCatching {
-                                                            val model = webrtcMessage.motionModel ?: return
-                                                            // 处理时钟差异导致的ANR
-                                                            val now = SystemClock.uptimeMillis()
-                                                            if (model.action == MotionEvent.ACTION_DOWN) {
-                                                                downTime = now
-                                                            }
-                                                            model.eventTime = now
-                                                            model.downTime = downTime
-                                                            model.scaleByScreen(screenHeight, screenWidth)
-                                                            val event = model.toMotionEvent()
-                                                            injectInputEvent.invoke(inputManager, event, 0)
-                                                        }.onFailure {
-                                                            it.printStackTrace()
-                                                        }
-                                                    }
                                                     else -> {}
                                                 }
                                             }
