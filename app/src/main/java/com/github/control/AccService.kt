@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.util.Log
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
+import com.github.control.anydesk.EventSocketHandler
 import com.github.control.anydesk.MotionEventHandler
 import com.github.control.scrcpy.Controller
 import com.github.control.scrcpy.ControllerDelegate

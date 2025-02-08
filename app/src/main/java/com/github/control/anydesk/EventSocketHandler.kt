@@ -1,4 +1,4 @@
-package com.github.control
+package com.github.control.anydesk
 
 import android.view.MotionEvent
 import com.github.control.scrcpy.Controller

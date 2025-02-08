@@ -11,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.github.control.anydesk.EventSocketHandler
 import com.github.control.scrcpy.Controller
 import java.net.InetSocketAddress
 import java.net.Socket
