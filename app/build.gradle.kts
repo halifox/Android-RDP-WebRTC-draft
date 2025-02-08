@@ -32,7 +32,8 @@ android {
     }
     buildFeatures {
 //        aidl = true
-        buildConfig = true
+//        buildConfig = true
+        viewBinding = true
     }
 }
 

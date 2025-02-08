@@ -3,32 +3,28 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center_horizontal"
+    android:fitsSystemWindows="true"
+    android:gravity="center"
     android:orientation="vertical">
 
     <Button
-        android:id="@+id/btna"
+        android:id="@+id/slave"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="开启无障碍服务(受控端)" />
 
     <EditText
-        android:id="@+id/etb"
+        android:id="@+id/host"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="受控端IP"
         android:text="192.168.31.166" />
 
     <Button
-        android:id="@+id/btnb"
+        android:id="@+id/master"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="连接受控端(主控端)" />
 
-    <FrameLayout
-        android:id="@+id/panel"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#00BCD4" />
 
 </LinearLayout>

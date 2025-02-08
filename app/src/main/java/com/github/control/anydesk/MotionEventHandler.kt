@@ -3,6 +3,7 @@ package com.github.control.anydesk
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.view.MotionEvent
+import com.github.control.scrcpy.ControllerDelegate
 
 /**
  * 处理触摸事件并将其转换为无障碍手势的事件处理类
@@ -13,8 +14,13 @@ import android.view.MotionEvent
 class MotionEventHandler(
     private val accessibilityService: AccessibilityService,
     private val trackers: List<GestureTracker> = List(16) { GestureTracker() },
-) {
+) : ControllerDelegate {
     private var isGestureActive = false // 标识当前是否有手势在进行
+
+    override fun injectInputEvent(inputEvent: MotionEvent, displayId: Int, injectMode: Int): Boolean {
+        handleEvent(inputEvent)
+        return true
+    }
 
     /**
      * 处理 MotionEvent 事件并转换为相应的手势操作
@@ -30,18 +36,18 @@ class MotionEventHandler(
             val y = motionEvent.getY(actionIndex)
 
             when (actionMasked) {
-                MotionEvent.ACTION_DOWN           -> onActionDown(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_UP             -> onActionUp(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_MOVE           -> onActionMove(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_CANCEL         -> onActionCancel(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_OUTSIDE        -> {}
-                MotionEvent.ACTION_POINTER_DOWN   -> onActionPointerDown(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_POINTER_UP     -> onActionPointerUp(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_HOVER_MOVE     -> {}
-                MotionEvent.ACTION_SCROLL         -> {}
-                MotionEvent.ACTION_HOVER_ENTER    -> {}
-                MotionEvent.ACTION_HOVER_EXIT     -> {}
-                MotionEvent.ACTION_BUTTON_PRESS   -> {}
+                MotionEvent.ACTION_DOWN -> onActionDown(pointerId, x, y, motionEvent)
+                MotionEvent.ACTION_UP -> onActionUp(pointerId, x, y, motionEvent)
+                MotionEvent.ACTION_MOVE -> onActionMove(pointerId, x, y, motionEvent)
+                MotionEvent.ACTION_CANCEL -> onActionCancel(pointerId, x, y, motionEvent)
+                MotionEvent.ACTION_OUTSIDE -> {}
+                MotionEvent.ACTION_POINTER_DOWN -> onActionPointerDown(pointerId, x, y, motionEvent)
+                MotionEvent.ACTION_POINTER_UP -> onActionPointerUp(pointerId, x, y, motionEvent)
+                MotionEvent.ACTION_HOVER_MOVE -> {}
+                MotionEvent.ACTION_SCROLL -> {}
+                MotionEvent.ACTION_HOVER_ENTER -> {}
+                MotionEvent.ACTION_HOVER_EXIT -> {}
+                MotionEvent.ACTION_BUTTON_PRESS -> {}
                 MotionEvent.ACTION_BUTTON_RELEASE -> {}
             }
             motionEvent.recycle()
