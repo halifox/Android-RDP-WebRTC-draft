@@ -16,7 +16,7 @@ import java.net.ServerSocket
 import java.util.concurrent.Executors
 
 
-class AccService : AccessibilityService() {
+class ControlService : AccessibilityService() {
     private val context = this
     private val controller = Controller()
     private val motionEventHandler = MotionEventHandler(this)
@@ -24,6 +24,9 @@ class AccService : AccessibilityService() {
     private val executor = Executors.newCachedThreadPool()
 
     private val delegate = object : ControllerDelegate {
+        override fun nothing() {
+        }
+
         override fun injectInputEvent(inputEvent: MotionEvent, displayId: Int, injectMode: Int): Boolean {
             motionEventHandler.handleEvent(inputEvent)
             return true
