@@ -13,11 +13,11 @@ import androidx.annotation.NonNull;
 
 import java.lang.reflect.Method;
 
-public class Injector {
+public class Controller {
     public static DisplayMetrics displayMetrics = new DisplayMetrics();
     private static Method setActionButtonMethod;
 
-    private InjectorDelegate injectorDelegate;
+    private ControllerDelegate controllerDelegate;
     private long lastTouchDown;
 
     private final PointersState pointersState = new PointersState();
@@ -29,7 +29,7 @@ public class Injector {
     // control_msg.h values of the pointerId field in inject_touch_event message
     private static final int POINTER_ID_MOUSE = -1;
 
-    public Injector() {
+    public Controller() {
         initPointers();
     }
 
@@ -47,13 +47,13 @@ public class Injector {
         }
     }
 
-    public void setInjectorDelegate(InjectorDelegate injectorDelegate) {
-        this.injectorDelegate = injectorDelegate;
+    public void setInjectorDelegate(ControllerDelegate controllerDelegate) {
+        this.controllerDelegate = controllerDelegate;
     }
 
     public boolean injectInputEvent(MotionEvent inputEvent, int displayId, int injectMode) {
-        if (injectorDelegate != null) {
-            return injectorDelegate.injectInputEvent(inputEvent, displayId, injectMode);
+        if (controllerDelegate != null) {
+            return controllerDelegate.injectInputEvent(inputEvent, displayId, injectMode);
         }
         return false;
     }

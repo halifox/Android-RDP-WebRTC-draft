@@ -1,7 +1,7 @@
 package com.github.control
 
 import android.view.MotionEvent
-import com.github.control.scrcpy.Injector
+import com.github.control.scrcpy.Controller
 import com.github.control.scrcpy.Position
 import java.io.Closeable
 import java.io.DataInputStream
@@ -18,7 +18,7 @@ class EventSocketHandler(
     private val socket: Socket,
     private val inputStream: DataInputStream = DataInputStream(socket.inputStream),
     private val outputStream: DataOutputStream = DataOutputStream(socket.outputStream),
-    private val injector: Injector? = null,
+    private val controller: Controller? = null,
     private val singleWriterExecutor: ExecutorService = Executors.newSingleThreadExecutor(),
 ) : Closeable {
     companion object {
@@ -81,7 +81,7 @@ class EventSocketHandler(
         val actionButton = inputStream.readInt()
         val buttons = inputStream.readInt()
         val position = Position(x, y, screenWidth, screenHeight)
-        injector?.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
+        controller?.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
     }
 
     fun writeMotionEvent(event: MotionEvent) {
@@ -91,8 +91,8 @@ class EventSocketHandler(
             outputStream.writeInt(event.getPointerId(event.actionIndex))
             outputStream.writeInt(event.getX(event.actionIndex).toInt())
             outputStream.writeInt(event.getY(event.actionIndex).toInt())
-            outputStream.writeInt(Injector.displayMetrics.widthPixels)
-            outputStream.writeInt(Injector.displayMetrics.heightPixels)
+            outputStream.writeInt(Controller.displayMetrics.widthPixels)
+            outputStream.writeInt(Controller.displayMetrics.heightPixels)
             outputStream.writeFloat(event.pressure)
             outputStream.writeInt(event.actionButton)
             outputStream.writeInt(event.buttonState)

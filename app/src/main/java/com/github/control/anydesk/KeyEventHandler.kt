@@ -4,16 +4,12 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK
 import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME
 import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS
-import android.os.Parcel
 import android.view.KeyEvent
 
 class KeyEventHandler(
     private val accessibilityService: AccessibilityService,
 ) {
-    fun handleEvent(parcel: Parcel) {
-        val keyEvent = KeyEvent.CREATOR.createFromParcel(parcel)
-        val unusedByte1 = parcel.readByte()
-        val unusedByte2 = parcel.readByte()
+    fun handleEvent(keyEvent: KeyEvent) {
         val action = keyEvent.action
         val keyCode = keyEvent.keyCode
         val isShiftPressed = keyEvent.isShiftPressed

@@ -11,7 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.github.control.scrcpy.Injector
+import com.github.control.scrcpy.Controller
 import java.net.InetSocketAddress
 import java.net.Socket
 
@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         setupWindowInsets()
-        Injector.updateDisplayMetrics(this)
+        Controller.updateDisplayMetrics(this)
 
         findViewById<View>(R.id.btna)?.setOnClickListener { openAccessibilitySettings() }
         findViewById<View>(R.id.btnb)?.setOnClickListener { connectToHost() }

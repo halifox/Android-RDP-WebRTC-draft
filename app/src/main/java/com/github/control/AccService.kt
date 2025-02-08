@@ -9,20 +9,20 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
 import com.github.control.anydesk.MotionEventHandler
-import com.github.control.scrcpy.Injector
-import com.github.control.scrcpy.InjectorDelegate
+import com.github.control.scrcpy.Controller
+import com.github.control.scrcpy.ControllerDelegate
 import java.net.ServerSocket
 import java.util.concurrent.Executors
 
 
 class AccService : AccessibilityService() {
     private val context = this
-    private val injector = Injector()
+    private val controller = Controller()
     private val motionEventHandler = MotionEventHandler(this)
 
     private val executor = Executors.newCachedThreadPool()
 
-    private val delegate = object : InjectorDelegate {
+    private val delegate = object : ControllerDelegate {
         override fun injectInputEvent(inputEvent: MotionEvent, displayId: Int, injectMode: Int): Boolean {
             motionEventHandler.handleEvent(inputEvent)
             return true
@@ -31,22 +31,22 @@ class AccService : AccessibilityService() {
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            Injector.updateDisplayMetrics(context)
+            Controller.updateDisplayMetrics(context)
         }
     }
 
     override fun onCreate() {
         super.onCreate()
         registerReceiver(receiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED))
-        Injector.updateDisplayMetrics(context)
-        injector.setInjectorDelegate(delegate)
+        Controller.updateDisplayMetrics(context)
+        controller.setInjectorDelegate(delegate)
         executor.execute(::startServer)
     }
 
 
     override fun onDestroy() {
         super.onDestroy()
-        injector.setInjectorDelegate(null)
+        controller.setInjectorDelegate(null)
         unregisterReceiver(receiver)
         executor.shutdown()
     }
@@ -62,7 +62,7 @@ class AccService : AccessibilityService() {
                 val socket = serverSocket.accept()
                 Log.d("TAG", "Connection accepted from: ${socket.inetAddress.hostAddress}, port: ${socket.port}")
 
-                val handler = EventSocketHandler(socket, injector = injector)
+                val handler = EventSocketHandler(socket, controller = controller)
                 Log.d("TAG", "Handler created for connection: ${socket.inetAddress.hostAddress}:${socket.port}")
 
                 executor.execute {
