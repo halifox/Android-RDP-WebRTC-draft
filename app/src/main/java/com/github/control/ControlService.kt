@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 
 class ControlService : AccessibilityService() {
     companion object {
+        const val TYPE_GLOBAL_ACTION = 1
         const val TYPE_MOTION_EVENT = 2
     }
 
@@ -83,9 +84,15 @@ class ControlService : AccessibilityService() {
     private suspend fun recv(inputStream: ByteReadChannel) {
         val type = inputStream.readInt()
         when (type) {
+            TYPE_GLOBAL_ACTION -> recvGlobalAction(inputStream)
             TYPE_MOTION_EVENT -> recvMotionEvent(inputStream)
             else -> {}
         }
+    }
+
+    private suspend fun recvGlobalAction(inputStream: ByteReadChannel) {
+        val action = inputStream.readInt()
+        performGlobalAction(action)
     }
 
     private suspend fun recvMotionEvent(inputStream: ByteReadChannel) {

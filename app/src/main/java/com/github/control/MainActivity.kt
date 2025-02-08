@@ -1,5 +1,6 @@
 package com.github.control
 
+import android.accessibilityservice.AccessibilityService
 import android.annotation.SuppressLint
 import android.app.ProgressDialog
 import android.content.Intent
@@ -31,6 +32,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val context = this
     private val eventChannel = Channel<MotionEvent>(Channel.BUFFERED)
+    private val actionChannel = Channel<Int>(Channel.BUFFERED)
     private val selectorManager = SelectorManager(Dispatchers.IO)
     private val progressDialog by lazy {
         ProgressDialog(context).apply {
@@ -70,6 +72,16 @@ class MainActivity : AppCompatActivity() {
             eventChannel.trySend(event)
             true
         }
+
+        binding.back.setOnClickListener {
+            actionChannel.trySend(AccessibilityService.GLOBAL_ACTION_BACK)
+        }
+        binding.home.setOnClickListener {
+            actionChannel.trySend(AccessibilityService.GLOBAL_ACTION_HOME)
+        }
+        binding.recents.setOnClickListener {
+            actionChannel.trySend(AccessibilityService.GLOBAL_ACTION_RECENTS)
+        }
     }
 
     override fun onDestroy() {
@@ -107,21 +119,32 @@ class MainActivity : AppCompatActivity() {
                 binding.slave.visibility = View.GONE
                 binding.host.visibility = View.GONE
                 binding.master.visibility = View.GONE
+                binding.controlPenal.visibility = View.VISIBLE
             }
 
             val byteWriteChannel = socket.openWriteChannel()
-            eventChannel.consumeEach { event ->
-                byteWriteChannel.writeInt(ControlService.TYPE_MOTION_EVENT)
-                byteWriteChannel.writeInt(event.action)
-                byteWriteChannel.writeInt(event.getPointerId(event.actionIndex))
-                byteWriteChannel.writeInt(event.getX(event.actionIndex).toInt())
-                byteWriteChannel.writeInt(event.getY(event.actionIndex).toInt())
-                byteWriteChannel.writeInt(Controller.displayMetrics.widthPixels)
-                byteWriteChannel.writeInt(Controller.displayMetrics.heightPixels)
-                byteWriteChannel.writeShort(Binary.floatToI16FixedPoint(event.pressure))
-                byteWriteChannel.writeInt(event.actionButton)
-                byteWriteChannel.writeInt(event.buttonState)
-                byteWriteChannel.flush()
+            launch {
+                eventChannel.consumeEach { event ->
+                    byteWriteChannel.writeInt(ControlService.TYPE_MOTION_EVENT)
+                    byteWriteChannel.writeInt(event.action)
+                    byteWriteChannel.writeInt(event.getPointerId(event.actionIndex))
+                    byteWriteChannel.writeInt(event.getX(event.actionIndex).toInt())
+                    byteWriteChannel.writeInt(event.getY(event.actionIndex).toInt())
+                    byteWriteChannel.writeInt(Controller.displayMetrics.widthPixels)
+                    byteWriteChannel.writeInt(Controller.displayMetrics.heightPixels)
+                    byteWriteChannel.writeShort(Binary.floatToI16FixedPoint(event.pressure))
+                    byteWriteChannel.writeInt(event.actionButton)
+                    byteWriteChannel.writeInt(event.buttonState)
+                    byteWriteChannel.flush()
+                }
+            }
+            launch {
+                actionChannel.consumeEach {
+                    val action = it
+                    byteWriteChannel.writeInt(ControlService.TYPE_GLOBAL_ACTION)
+                    byteWriteChannel.writeInt(action)
+                    byteWriteChannel.flush()
+                }
             }
         }
     }
