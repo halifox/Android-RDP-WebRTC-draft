@@ -5,23 +5,32 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.util.Log
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
-import com.github.control.anydesk.EventSocketHandler
 import com.github.control.anydesk.MotionEventHandler
+import com.github.control.scrcpy.Binary
 import com.github.control.scrcpy.Controller
 import com.github.control.scrcpy.ControllerDelegate
-import java.net.ServerSocket
-import java.util.concurrent.Executors
+import com.github.control.scrcpy.Position
+import io.ktor.network.selector.SelectorManager
+import io.ktor.network.sockets.aSocket
+import io.ktor.network.sockets.openReadChannel
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.readInt
+import io.ktor.utils.io.readShort
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 
 class ControlService : AccessibilityService() {
+    companion object {
+        const val TYPE_MOTION_EVENT = 2
+    }
+
     private val context = this
     private val controller = Controller()
     private val motionEventHandler = MotionEventHandler(this)
-
-    private val executor = Executors.newCachedThreadPool()
 
     private val delegate = object : ControllerDelegate {
         override fun nothing() {
@@ -44,7 +53,7 @@ class ControlService : AccessibilityService() {
         registerReceiver(receiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED))
         Controller.updateDisplayMetrics(context)
         controller.setInjectorDelegate(delegate)
-        executor.execute(::startServer)
+        startServer()
     }
 
 
@@ -52,33 +61,54 @@ class ControlService : AccessibilityService() {
         super.onDestroy()
         controller.setInjectorDelegate(null)
         unregisterReceiver(receiver)
-        executor.shutdown()
     }
 
+    suspend fun recv(inputStream: ByteReadChannel) {
+        val type = inputStream.readInt()
+        when (type) {
+            TYPE_MOTION_EVENT -> readMotionEvent(inputStream)
+            else              -> {}
+        }
+    }
+
+    private suspend fun readMotionEvent(inputStream: ByteReadChannel) {
+        //val type = inputStream.readInt()//TYPE_MOTION_EVENT
+        val action = inputStream.readInt()
+        val pointerId = inputStream.readInt()
+        val x = inputStream.readInt()
+        val y = inputStream.readInt()
+        val screenWidth = inputStream.readInt()
+        val screenHeight = inputStream.readInt()
+        val pressure = Binary.i16FixedPointToFloat(inputStream.readShort())
+        val actionButton = inputStream.readInt()
+        val buttons = inputStream.readInt()
+        val position = Position(x, y, screenWidth, screenHeight)
+        controller.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
+    }
+
+
     private fun startServer() {
-        try {
-            Log.d("TAG", "Starting server on port 40000...")
-            val serverSocket = ServerSocket(40000, 1)
-            Log.d("TAG", "Server started successfully, waiting for connections...")
 
+        MainScope().launch(Dispatchers.IO) {
+            val selectorManager = SelectorManager(Dispatchers.IO)
+            val serverSocket = aSocket(selectorManager).tcp().bind("0.0.0.0", 40000)
+            println("Server is listening at ${serverSocket.localAddress}")
             while (true) {
-                Log.d("TAG", "Waiting for client connection...")
                 val socket = serverSocket.accept()
-                Log.d("TAG", "Connection accepted from: ${socket.inetAddress.hostAddress}, port: ${socket.port}")
-
-                val handler = EventSocketHandler(socket, controller = controller)
-                Log.d("TAG", "Handler created for connection: ${socket.inetAddress.hostAddress}:${socket.port}")
-
-                executor.execute {
-                    Log.d("TAG", "Starting handler loop for socket: ${socket.inetAddress.hostAddress}:${socket.port}")
-                    handler.loopRecv()
-                    Log.d("TAG", "Finish handler loop for socket: ${socket.inetAddress.hostAddress}:${socket.port}")
+                println("Accepted $socket")
+                launch(Dispatchers.IO) {
+                    val inputStream = socket.openReadChannel()
+                    try {
+                        while (true) {
+                            recv(inputStream)
+                        }
+                    } catch (e: Throwable) {
+                        socket.close()
+                    }
                 }
             }
-        } catch (e: Exception) {
-            Log.e("TAG", "Error occurred while starting server", e)
-            e.printStackTrace()
         }
+
     }
 
 

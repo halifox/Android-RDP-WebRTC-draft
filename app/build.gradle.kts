@@ -47,5 +47,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-//    implementation(project(":scrcpy"))
+
+    val ktor_version = "3.0.3"
+    implementation("io.ktor:ktor-network:$ktor_version")
 }

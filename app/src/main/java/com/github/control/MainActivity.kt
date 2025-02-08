@@ -4,47 +4,41 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
+import android.view.MotionEvent
 import android.view.View
 import android.widget.EditText
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import com.github.control.anydesk.EventSocketHandler
+import androidx.lifecycle.lifecycleScope
+import com.github.control.scrcpy.Binary
 import com.github.control.scrcpy.Controller
-import java.net.InetSocketAddress
-import java.net.Socket
+import io.ktor.network.selector.SelectorManager
+import io.ktor.network.sockets.aSocket
+import io.ktor.network.sockets.openWriteChannel
+import io.ktor.utils.io.writeInt
+import io.ktor.utils.io.writeShort
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.launch
 
 @SuppressLint("MissingInflatedId", "ClickableViewAccessibility")
 class MainActivity : AppCompatActivity() {
 
-    private var eventSocketHandler: EventSocketHandler? = null
-    private var socket = Socket()
-
+    private val eventChannel = Channel<MotionEvent>(Channel.BUFFERED)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        setupWindowInsets()
         Controller.updateDisplayMetrics(this)
 
         findViewById<View>(R.id.btna)?.setOnClickListener { openAccessibilitySettings() }
         findViewById<View>(R.id.btnb)?.setOnClickListener { connectToHost() }
         findViewById<View>(R.id.panel)?.setOnTouchListener { _, event ->
-            eventSocketHandler?.writeMotionEvent(event)
+            eventChannel.trySend(event)
             true
         }
     }
 
-    private fun setupWindowInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)!!) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-    }
 
     private fun openAccessibilitySettings() {
         val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
@@ -55,27 +49,28 @@ class MainActivity : AppCompatActivity() {
 
     private fun connectToHost() {
         val host = findViewById<EditText>(R.id.etb)?.text.toString()
-        Thread { startClient(host) }.start()
+        startClient(host)
     }
+
 
     private fun startClient(host: String) {
-        try {
-            closeSocketIfOpen()
-            socket = Socket().apply {
-                connect(InetSocketAddress(host, 40000))
+        lifecycleScope.launch(Dispatchers.IO) {
+            val selectorManager = SelectorManager(Dispatchers.IO)
+            val socket = aSocket(selectorManager).tcp().connect(host, 40000)
+            val outputStream = socket.openWriteChannel()
+            eventChannel.consumeEach { event ->
+                outputStream.writeInt(ControlService.TYPE_MOTION_EVENT)
+                outputStream.writeInt(event.action)
+                outputStream.writeInt(event.getPointerId(event.actionIndex))
+                outputStream.writeInt(event.getX(event.actionIndex).toInt())
+                outputStream.writeInt(event.getY(event.actionIndex).toInt())
+                outputStream.writeInt(Controller.displayMetrics.widthPixels)
+                outputStream.writeInt(Controller.displayMetrics.heightPixels)
+                outputStream.writeShort(Binary.floatToI16FixedPoint(event.pressure))
+                outputStream.writeInt(event.actionButton)
+                outputStream.writeInt(event.buttonState)
+                outputStream.flush()
             }
-            Log.d("TAG", "Connected: $socket")
-            eventSocketHandler = EventSocketHandler(socket)
-        } catch (e: Exception) {
-            Log.d("TAG", "Socket error: ${e.message}")
-            closeSocketIfOpen()
-        }
-    }
-
-    private fun closeSocketIfOpen() {
-        if (!socket.isClosed) {
-            socket.close()
-            Log.d("TAG", "Socket closed: $socket")
         }
     }
 }
