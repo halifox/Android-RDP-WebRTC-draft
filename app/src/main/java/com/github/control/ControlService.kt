@@ -16,6 +16,7 @@ import io.ktor.network.sockets.openReadChannel
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readInt
 import io.ktor.utils.io.readShort
+import io.ktor.utils.io.readUTF8Line
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -96,6 +97,7 @@ class ControlService : AccessibilityService() {
     }
 
     private suspend fun recvMotionEvent(inputStream: ByteReadChannel) {
+        inputStream.readUTF8Line()
         val action = inputStream.readInt()
         val pointerId = inputStream.readInt()
         val x = inputStream.readInt()

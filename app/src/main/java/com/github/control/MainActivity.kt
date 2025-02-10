@@ -19,7 +19,12 @@ import com.github.control.scrcpy.Binary
 import com.github.control.scrcpy.Controller
 import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.aSocket
+import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
+import io.ktor.utils.io.core.toByteArray
+import io.ktor.utils.io.readByteArray
+import io.ktor.utils.io.readInt
+import io.ktor.utils.io.writeByteArray
 import io.ktor.utils.io.writeInt
 import io.ktor.utils.io.writeShort
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -28,6 +33,19 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.webrtc.DataChannel
+import org.webrtc.DefaultVideoDecoderFactory
+import org.webrtc.DefaultVideoEncoderFactory
+import org.webrtc.EglBase
+import org.webrtc.IceCandidate
+import org.webrtc.MediaConstraints
+import org.webrtc.MediaStream
+import org.webrtc.PeerConnection
+import org.webrtc.PeerConnectionFactory
+import org.webrtc.RtpReceiver
+import org.webrtc.SdpObserver
+import org.webrtc.SessionDescription
+import org.webrtc.VideoTrack
 
 
 @SuppressLint("MissingInflatedId", "ClickableViewAccessibility")
@@ -57,6 +75,24 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    //EglBase
+    private val eglBase = EglBase.create()
+    private val eglBaseContext = eglBase.getEglBaseContext()
+    private val peerConnectionFactory = PeerConnectionFactory.builder()
+        .setOptions(PeerConnectionFactory.Options())
+        .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglBaseContext, true, true))
+        .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBaseContext))
+        .createPeerConnectionFactory()
+
+    //rtc配置
+    private val rtcConfig = PeerConnection.RTCConfiguration(listOf())
+        .apply {
+            tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
+            bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
+            rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
+            continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
+            keyType = PeerConnection.KeyType.ECDSA
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,13 +101,15 @@ class MainActivity : AppCompatActivity() {
 
         Controller.updateDisplayMetrics(context)
 
+        binding.SurfaceViewRenderer.init(eglBaseContext, null)
+
         binding.slave.setOnClickListener {
             openAccessibilitySettings()
         }
         binding.master.setOnClickListener {
             connectToHost()
         }
-        binding.main.setOnTouchListener { _, event ->
+        binding.SurfaceViewRenderer.setOnTouchListener { _, event ->
             eventChannel.trySend(event)
             true
         }
@@ -120,8 +158,177 @@ class MainActivity : AppCompatActivity() {
     private fun connectToHost() {
         val host = binding.host.text.toString()
         startClient(host)
+        b(host)
     }
 
+    private fun b(host: String) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val socket = aSocket(selectorManager).tcp()
+                .connect(host, 40001)
+
+            val byteWriteChannel = socket.openWriteChannel()
+            val byteReadChannel = socket.openReadChannel()
+
+            val peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
+                override fun onAddTrack(rtpReceiver: RtpReceiver, mediaStreams: Array<out MediaStream>) {
+                    super.onAddTrack(rtpReceiver, mediaStreams)
+                    val track = rtpReceiver.track()
+                    when (track) {
+                        is VideoTrack -> {
+                            track.addSink(binding.SurfaceViewRenderer)
+                        }
+                    }
+                }
+
+                override fun onSignalingChange(p0: PeerConnection.SignalingState?) {
+
+                }
+
+                override fun onIceConnectionChange(p0: PeerConnection.IceConnectionState?) {
+
+                }
+
+                override fun onIceConnectionReceivingChange(p0: Boolean) {
+
+                }
+
+                override fun onIceGatheringChange(p0: PeerConnection.IceGatheringState?) {
+
+                }
+
+                override fun onIceCandidate(iceCandidate: IceCandidate) {
+                    lifecycleScope.launch {
+                        println(
+                            """
+                                send iceCandidate
+                                ${iceCandidate.sdpMid}
+                                ${iceCandidate.sdpMLineIndex}
+                                ${iceCandidate.sdp}
+                            """.trimIndent()
+                        )
+
+                        byteWriteChannel.writeInt(1)
+                        byteWriteChannel.writeInt(iceCandidate.sdpMid.length)
+                        byteWriteChannel.writeByteArray(iceCandidate.sdpMid.toByteArray())
+                        byteWriteChannel.writeInt(iceCandidate.sdpMLineIndex)
+                        byteWriteChannel.writeInt(iceCandidate.sdp.length)
+                        byteWriteChannel.writeByteArray(iceCandidate.sdp.toByteArray())
+                        byteWriteChannel.flush()
+                    }
+
+                }
+
+                override fun onIceCandidatesRemoved(p0: Array<out IceCandidate>?) {
+
+                }
+
+                override fun onAddStream(p0: MediaStream?) {
+
+                }
+
+                override fun onRemoveStream(p0: MediaStream?) {
+
+                }
+
+                override fun onDataChannel(p0: DataChannel?) {
+
+                }
+
+                override fun onRenegotiationNeeded() {
+
+                }
+            })
+
+
+            launch {
+                while (true) {
+                    val type = byteReadChannel.readInt()
+                    when (type) {
+                        1 -> {//ICE
+                            val sdpMid = String(byteReadChannel.readByteArray(byteReadChannel.readInt()))
+                            val sdpMLineIndex = byteReadChannel.readInt()
+                            val sdp = String(byteReadChannel.readByteArray(byteReadChannel.readInt()))
+                            val iceCandidate = IceCandidate(sdpMid, sdpMLineIndex, sdp)
+                            peerConnection?.addIceCandidate(iceCandidate)
+                        }
+
+                        2 -> {//SDP
+                            val type = String(byteReadChannel.readByteArray(byteReadChannel.readInt()))
+                            val description = String(byteReadChannel.readByteArray(byteReadChannel.readInt()))
+                            val sdp = SessionDescription(SessionDescription.Type.valueOf(type), description)
+                            peerConnection?.setRemoteDescription(object : SdpObserver {
+                                override fun onCreateSuccess(p0: SessionDescription?) {
+                                    
+                                }
+
+                                override fun onSetSuccess() {
+                                    
+                                }
+
+                                override fun onCreateFailure(p0: String?) {
+                                    
+                                }
+
+                                override fun onSetFailure(p0: String?) {
+                                    
+                                }
+                            }, sdp)
+                            peerConnection?.createAnswer(
+                                object : SdpObserver {
+                                    override fun onCreateSuccess(sdp: SessionDescription?) {
+                                        peerConnection?.setLocalDescription(object : SdpObserver {
+                                            override fun onCreateSuccess(description: SessionDescription) {
+                                                lifecycleScope.launch {
+                                                    println(
+                                                        """
+                                send description
+                                ${description.type.name}
+                                ${description.description}
+                            """.trimIndent()
+                                                    )
+
+                                                    byteWriteChannel.writeInt(2)
+                                                    byteWriteChannel.writeInt(description.type.name.length)
+                                                    byteWriteChannel.writeByteArray(description.type.name.toByteArray())
+                                                    byteWriteChannel.writeInt(description.description.length)
+                                                    byteWriteChannel.writeByteArray(description.description.toByteArray())
+                                                    byteWriteChannel.flush()
+                                                }
+                                            }
+
+                                            override fun onSetSuccess() {
+
+                                            }
+
+                                            override fun onCreateFailure(p0: String?) {
+
+                                            }
+
+                                            override fun onSetFailure(p0: String?) {
+
+                                            }
+                                        }, sdp)
+                                    }
+
+                                    override fun onSetSuccess() {
+
+                                    }
+
+                                    override fun onCreateFailure(p0: String?) {
+
+                                    }
+
+                                    override fun onSetFailure(p0: String?) {
+
+                                    }
+                                }, MediaConstraints()
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     private fun startClient(host: String) {
         lifecycleScope.launch(Dispatchers.IO + coroutineExceptionHandler) {
