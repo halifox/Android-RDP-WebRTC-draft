@@ -24,7 +24,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import org.webrtc.*
+import org.webrtc.DefaultVideoDecoderFactory
+import org.webrtc.DefaultVideoEncoderFactory
+import org.webrtc.EglBase
+import org.webrtc.IceCandidate
+import org.webrtc.MediaConstraints
+import org.webrtc.MediaStream
+import org.webrtc.PeerConnection
+import org.webrtc.PeerConnectionFactory
+import org.webrtc.RtpReceiver
+import org.webrtc.SessionDescription
+import org.webrtc.SurfaceTextureHelper
+import org.webrtc.VideoTrack
 import org.webrtc.audio.JavaAudioDeviceModule
 
 
@@ -38,8 +49,17 @@ class PullActivity : AppCompatActivity() {
     private val context = this
 
     //EglBase
+    // EglBase
     private val eglBase = EglBase.create()
     private val eglBaseContext = eglBase.getEglBaseContext()
+    private val peerConnectionFactory = PeerConnectionFactory.builder()
+        .setOptions(PeerConnectionFactory.Options())
+        .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglBaseContext, true, true))
+        .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBaseContext))
+        .createPeerConnectionFactory()
+    private val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext, true)
+    private val videoSource = peerConnectionFactory.createVideoSource(true, true)
+    private val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,133 +71,118 @@ class PullActivity : AppCompatActivity() {
     }
 
 
-
     private fun initService() {
         mainScope.launch(Dispatchers.IO) {
             runCatching {
                 eventLoopGroup = NioEventLoopGroup()
                 Bootstrap()
-                        .group(eventLoopGroup)
-                        .channel(NioSocketChannel::class.java)
-                        .handler(object : ChannelInitializer<SocketChannel>() {
-                            override fun initChannel(channel: SocketChannel) {
-                                val pipeline = channel.pipeline()
-                                //数据分包，组包，粘包
-                                pipeline.addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
-                                pipeline.addLast(LengthFieldPrepender(4))
-                                pipeline.addLast(StringDecoder(CharsetUtil.UTF_8))
-                                pipeline.addLast(StringEncoder(CharsetUtil.UTF_8))
-                                pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
-                                    private var peerConnection: PeerConnection? = null
+                    .group(eventLoopGroup)
+                    .channel(NioSocketChannel::class.java)
+                    .handler(object : ChannelInitializer<SocketChannel>() {
+                        override fun initChannel(channel: SocketChannel) {
+                            val pipeline = channel.pipeline()
+                            //数据分包，组包，粘包
+                            pipeline.addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
+                            pipeline.addLast(LengthFieldPrepender(4))
+                            pipeline.addLast(StringDecoder(CharsetUtil.UTF_8))
+                            pipeline.addLast(StringEncoder(CharsetUtil.UTF_8))
+                            pipeline.addLast(object : SimpleChannelInboundHandler<String>() {
+                                private var peerConnection: PeerConnection? = null
 
-                                    @SuppressLint("ClickableViewAccessibility")
-                                    //信道激活消息
-                                    override fun channelActive(ctx: ChannelHandlerContext?) {
-                                        super.channelActive(ctx)
+                                @SuppressLint("ClickableViewAccessibility")
+                                //信道激活消息
+                                override fun channelActive(ctx: ChannelHandlerContext?) {
+                                    super.channelActive(ctx)
 
 
-                                        //初始化
-//                                        PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(requireContext().applicationContext).createInitializationOptions())
-                                        //视频编码器
-                                        val encoderFactory = DefaultVideoEncoderFactory(eglBaseContext, true, true)
-                                        //视频解码器
-                                        val decoderFactory = DefaultVideoDecoderFactory(eglBaseContext)
-                                        //音频设备模块
-                                        val audioDeviceModule = JavaAudioDeviceModule.builder(context).createAudioDeviceModule()
-                                        //选项
-                                        val options = PeerConnectionFactory.Options()
-                                        //对等连接Factory
-                                        val peerConnectionFactory = PeerConnectionFactory.builder()
-                                                .setOptions(options)
-                                                .setVideoEncoderFactory(encoderFactory)
-                                                .setVideoDecoderFactory(decoderFactory)
-                                                .setAudioDeviceModule(audioDeviceModule)
-                                                .createPeerConnectionFactory()
 
-                                        //rtc配置
-                                        val rtcConfig = PeerConnection.RTCConfiguration(listOf()).apply {
-                                            tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
-                                            bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
-                                            rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
-                                            continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
-                                            keyType = PeerConnection.KeyType.ECDSA
+                                    //rtc配置
+                                    val rtcConfig = PeerConnection.RTCConfiguration(listOf()).apply {
+                                        tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
+                                        bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
+                                        rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
+                                        continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
+                                        keyType = PeerConnection.KeyType.ECDSA
 //                                            sdpSemantics = PeerConnection.SdpSemantics.PLAN_B
-                                        }
+                                    }
 
 
-                                        //创建对等连接
-                                        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver() {
+                                    //创建对等连接
+                                    peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver() {
 
-                                            override fun onAddTrack(rtpReceiver: RtpReceiver, mediaStreams: Array<out MediaStream>) {
-                                                super.onAddTrack(rtpReceiver, mediaStreams)
-                                                val track = rtpReceiver.track()
-                                                when (track) {
-                                                    is VideoTrack -> {
-                                                        track.addSink(binding.SurfaceViewRenderer)
-                                                    }
+                                        override fun onAddTrack(rtpReceiver: RtpReceiver, mediaStreams: Array<out MediaStream>) {
+                                            super.onAddTrack(rtpReceiver, mediaStreams)
+                                            val track = rtpReceiver.track()
+                                            when (track) {
+                                                is VideoTrack -> {
+                                                    track.addSink(binding.SurfaceViewRenderer)
                                                 }
                                             }
-
-                                            override fun onIceCandidate(iceCandidate: IceCandidate) {
-                                                super.onIceCandidate(iceCandidate)
-                                                ctx?.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.ICE, iceCandidate = iceCandidate).toString())
-                                            }
-                                        })
-
-                                    }
-
-                                    //信道不活跃消息
-                                    override fun channelInactive(ctx: ChannelHandlerContext?) {
-                                        super.channelInactive(ctx)
-                                        binding.SurfaceViewRenderer.clearImage()
-                                        peerConnection?.dispose()
-                                        peerConnection = null
-                                    }
-
-                                    //信道读消息
-                                    override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
-                                        val webrtcMessage = WebrtcMessage(msg)
-                                        when (webrtcMessage.type) {
-                                            WebrtcMessage.Type.SDP -> {
-                                                peerConnection?.setRemoteDescription(SimpleSdpObserver(), webrtcMessage.description)
-                                                peerConnection?.createAnswer(object : SimpleSdpObserver() {
-                                                    override fun onCreateSuccess(description: SessionDescription) {
-                                                        peerConnection?.setLocalDescription(SimpleSdpObserver(), description)
-                                                        ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SDP, description = description).toString())
-                                                    }
-                                                }, MediaConstraints())
-                                            }
-                                            WebrtcMessage.Type.ICE -> {
-                                                peerConnection?.addIceCandidate(webrtcMessage.iceCandidate)
-                                            }
-                                            WebrtcMessage.Type.SIZE -> {
-                                                launch(Dispatchers.Main) {
-                                                    binding.SurfaceViewRenderer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                                                        dimensionRatio = "${webrtcMessage.size?.width}:${webrtcMessage.size?.height}"
-                                                    }
-                                                }
-                                            }
-                                            else -> {}
                                         }
 
+                                        override fun onIceCandidate(iceCandidate: IceCandidate) {
+                                            super.onIceCandidate(iceCandidate)
+                                            ctx?.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.ICE, iceCandidate = iceCandidate).toString())
+                                        }
+                                    })
 
+                                }
+
+                                //信道不活跃消息
+                                override fun channelInactive(ctx: ChannelHandlerContext?) {
+                                    super.channelInactive(ctx)
+                                    binding.SurfaceViewRenderer.clearImage()
+                                    peerConnection?.dispose()
+                                    peerConnection = null
+                                }
+
+                                //信道读消息
+                                override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
+                                    val webrtcMessage = WebrtcMessage(msg)
+                                    when (webrtcMessage.type) {
+                                        WebrtcMessage.Type.SDP -> {
+                                            peerConnection?.setRemoteDescription(SimpleSdpObserver(), webrtcMessage.description)
+                                            peerConnection?.createAnswer(object : SimpleSdpObserver() {
+                                                override fun onCreateSuccess(description: SessionDescription) {
+                                                    peerConnection?.setLocalDescription(SimpleSdpObserver(), description)
+                                                    ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SDP, description = description).toString())
+                                                }
+                                            }, MediaConstraints())
+                                        }
+
+                                        WebrtcMessage.Type.ICE -> {
+                                            peerConnection?.addIceCandidate(webrtcMessage.iceCandidate)
+                                        }
+
+                                        WebrtcMessage.Type.SIZE -> {
+                                            launch(Dispatchers.Main) {
+                                                binding.SurfaceViewRenderer.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                                                    dimensionRatio = "${webrtcMessage.size?.width}:${webrtcMessage.size?.height}"
+                                                }
+                                            }
+                                        }
+
+                                        else -> {}
                                     }
-                                })
-                            }
-                        })
-                        .connect(inetHost, inetPort).sync()
-                        .channel()
-                        .closeFuture().sync()
+
+
+                                }
+                            })
+                        }
+                    })
+                    .connect(inetHost, inetPort).sync()
+                    .channel()
+                    .closeFuture().sync()
             }.onFailure {
                 it.printStackTrace()
                 eventLoopGroup?.shutdownGracefully()
                 mainScope.launch(Dispatchers.Main) {
                     AlertDialog.Builder(context)
-                            .setTitle("${it.message}")
-                            .setNegativeButton("ok") { _, _ ->
+                        .setTitle("${it.message}")
+                        .setNegativeButton("ok") { _, _ ->
 
-                            }
-                            .show()
+                        }
+                        .show()
                 }
             }
         }
