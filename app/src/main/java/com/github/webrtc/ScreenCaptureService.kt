@@ -43,7 +43,6 @@ class ScreenCaptureService : Service() {
     private val screenHeight = ScreenUtils.getScreenHeight()
     private val screenWidth = ScreenUtils.getScreenWidth()
 
-    // EglBase
     private val eglBase = EglBase.create()
     private val eglBaseContext = eglBase.getEglBaseContext()
     private val peerConnectionFactory = PeerConnectionFactory.builder()
@@ -71,6 +70,7 @@ class ScreenCaptureService : Service() {
         super.onDestroy()
         workerGroup.shutdownGracefully()
         bossGroup.shutdownGracefully()
+        eglBase.release()
     }
 
 
@@ -91,81 +91,81 @@ class ScreenCaptureService : Service() {
 
 
     private fun startServer() {
-        Thread {
-            try {
-                ServerBootstrap()
-                    .group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel::class.java)
-                    .childHandler(object : ChannelInitializer<SocketChannel>() {
-                        override fun initChannel(channel: SocketChannel) {
-                            channel.pipeline()
-                                .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
-                                .addLast(LengthFieldPrepender(4))
-                                .addLast(ByteArrayDecoder())
-                                .addLast(ByteArrayEncoder())
-                                .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
-                                    private var peerConnection: PeerConnection? = null
-
-
-                                    override fun channelActive(ctx: ChannelHandlerContext) {
-                                        //创建对等连接
-                                        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : EmptyPeerConnectionObserver() {
-                                            override fun onIceCandidate(iceCandidate: IceCandidate) {
-                                                send(ctx, iceCandidate)
-                                            }
-                                        })
-
-                                        peerConnection?.addTrack(videoTrack)
-                                        peerConnection?.createOffer(object : EmptySdpObserver() {
-                                            override fun onCreateSuccess(description: SessionDescription) {
-                                                peerConnection?.setLocalDescription(EmptySdpObserver(), description)
-                                                send(ctx, description)
-                                            }
-                                        }, MediaConstraints())
+        ServerBootstrap()
+            .group(bossGroup, workerGroup)
+            .channel(NioServerSocketChannel::class.java)
+            .childHandler(object : ChannelInitializer<SocketChannel>() {
+                override fun initChannel(channel: SocketChannel) {
+                    channel.pipeline()
+                        .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
+                        .addLast(LengthFieldPrepender(4))
+                        .addLast(ByteArrayDecoder())
+                        .addLast(ByteArrayEncoder())
+                        .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
+                            private var peerConnection: PeerConnection? = null
+                            override fun channelActive(ctx: ChannelHandlerContext) {
+                                peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : EmptyPeerConnectionObserver() {
+                                    override fun onIceCandidate(iceCandidate: IceCandidate) {
+                                        send(ctx, iceCandidate)
                                     }
-
-                                    override fun channelInactive(ctx: ChannelHandlerContext) {
-                                        peerConnection?.dispose()
-                                        peerConnection = null
-                                    }
-
-                                    override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
-                                        val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(msg.size)
-                                        byteBuf.writeBytes(msg)
-                                        val type = byteBuf.readInt()
-                                        when (type) {
-                                            1 -> {
-                                                val sdpMid = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
-                                                val sdpMLineIndex = byteBuf.readInt()
-                                                val sdp = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
-                                                val iceCandidate = IceCandidate(sdpMid, sdpMLineIndex, sdp)
-                                                peerConnection?.addIceCandidate(iceCandidate)
-                                            }
-
-                                            2 -> {
-                                                val type = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
-                                                val description = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
-                                                val sdp = SessionDescription(SessionDescription.Type.valueOf(type), description)
-                                                peerConnection?.setRemoteDescription(EmptySdpObserver(), sdp)
-                                                peerConnection?.createAnswer(object : EmptySdpObserver() {}, MediaConstraints())
-                                            }
+                                })?.apply {
+                                    addTrack(videoTrack)
+                                    createOffer(object : EmptySdpObserver() {
+                                        override fun onCreateSuccess(description: SessionDescription) {
+                                            peerConnection?.setLocalDescription(EmptySdpObserver(), description)
+                                            send(ctx, description)
                                         }
+                                    }, MediaConstraints())
+                                }
+                            }
+
+                            override fun channelInactive(ctx: ChannelHandlerContext) {
+                                peerConnection?.dispose()
+                                peerConnection = null
+                            }
+
+                            override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
+                                val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(msg.size)
+                                byteBuf.writeBytes(msg)
+                                val type = byteBuf.readInt()
+                                when (type) {
+                                    1 -> {
+                                        val sdpMid = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                        val sdpMLineIndex = byteBuf.readInt()
+                                        val sdp = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                        val iceCandidate = IceCandidate(sdpMid, sdpMLineIndex, sdp)
+                                        peerConnection?.addIceCandidate(iceCandidate)
                                     }
-                                })
-                        }
-                    })
-                    .bind(40000)//
-                    .sync()//
-                    .channel()//
-                    .closeFuture()//
-                    .sync()//
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                bossGroup.shutdownGracefully()
-                workerGroup.shutdownGracefully()
+
+                                    2 -> {
+                                        val type = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                        val description = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                        val sdp = SessionDescription(SessionDescription.Type.valueOf(type), description)
+                                        peerConnection?.setRemoteDescription(EmptySdpObserver(), sdp)
+                                        peerConnection?.createAnswer(object : EmptySdpObserver() {}, MediaConstraints())
+                                    }
+                                }
+                            }
+                        })
+                }
+            })
+            .bind(40000).apply {
+                addListener { future ->
+                    if (future.isSuccess) {
+                        println("Server started on port 8888");
+                    } else {
+                        println("Failed to start server");
+                        future.cause().printStackTrace();
+                    }
+                }
+            }//
+            .channel()//
+            .closeFuture().apply {
+                addListener {
+                    bossGroup.shutdownGracefully()
+                    workerGroup.shutdownGracefully()
+                }
             }
-        }.start()
     }
 
 
