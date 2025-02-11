@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.brigitttta.remote_screencast"
+    package="com.github.webrtc"
     >
 
     <uses-permission android:name="android.permission.INJECT_EVENTS" />
@@ -23,21 +23,13 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:name=".APP"
+        android:name="com.github.webrtc.APP"
         android:theme="@style/Theme.Test_webrtc"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
+
         <activity
-            android:name=".srs.SrsActivity"
-            android:exported="false" />
-        <activity
-            android:name=".PullMoreActivity"
-            android:exported="false" />
-        <activity
-            android:name=".PushByMediaProjectionManagerActivity"
-            android:exported="false" />
-        <activity
-            android:name=".MainActivity"
+            android:name="com.github.webrtc.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -46,16 +38,10 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".PullActivity"
+            android:name="com.github.webrtc.PullActivity"
             android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
-        <activity android:name=".PushByReflectionActivity" />
-        <activity android:name=".TestActivity" />
-
         <service
-            android:name=".MediaProjectionForegroundService"
-            android:foregroundServiceType="mediaProjection" />
-        <service
-            android:name=".ScreenCaptureService"
+            android:name="com.github.webrtc.ScreenCaptureService"
             android:foregroundServiceType="mediaProjection" />
     </application>
 

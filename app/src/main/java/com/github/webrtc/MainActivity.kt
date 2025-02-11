@@ -1,4 +1,4 @@
-package com.brigitttta.remote_screencast
+package com.github.webrtc
 
 import android.content.Intent
 import android.media.projection.MediaProjectionManager

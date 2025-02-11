@@ -5,10 +5,10 @@ plugins {
 
 android {
     compileSdk 31
-    namespace "com.brigitttta.remote_screencast"
+    namespace "com.github.webrtc"
 
     defaultConfig {
-        applicationId "com.brigitttta.remote_screencast"
+        applicationId "com.github.webrtc"
         minSdk 21
         targetSdk 32
         versionCode 1
@@ -63,13 +63,13 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:3.4.0"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.3"
     implementation "io.netty:netty-all:4.1.17.Final"
-    implementation "com.google.code.gson:gson:2.9.0"
+//    implementation "com.google.code.gson:gson:2.9.0"
 
-    implementation "com.squareup.retrofit2:retrofit:2.9.0"
-    implementation "com.squareup.retrofit2:converter-gson:2.9.0"
+//    implementation "com.squareup.retrofit2:retrofit:2.9.0"
+//    implementation "com.squareup.retrofit2:converter-gson:2.9.0"
 //    implementation "com.blankj:utilcodex:1.31.0"
 
-    implementation("io.ktor:ktor-network:3.0.3")
+//    implementation("io.ktor:ktor-network:3.0.3")
     implementation("io.getstream:stream-webrtc-android:1.3.7")
     implementation ("com.blankj:utilcodex:1.31.0")
 }

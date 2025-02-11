@@ -1,4 +1,4 @@
-package com.brigitttta.remote_screencast
+package com.github.webrtc
 
 import org.webrtc.*
 

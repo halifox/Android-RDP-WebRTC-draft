@@ -1,10 +1,10 @@
-package com.brigitttta.remote_screencast
+package com.github.webrtc
 
 import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.brigitttta.remote_screencast.databinding.ActivityPullBinding
+import com.github.webrtc.databinding.ActivityPullBinding
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.PooledByteBufAllocator
 import io.netty.channel.ChannelHandlerContext
