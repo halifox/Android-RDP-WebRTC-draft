@@ -22,10 +22,6 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import io.netty.handler.codec.LengthFieldPrepender
 import io.netty.handler.codec.bytes.ByteArrayDecoder
 import io.netty.handler.codec.bytes.ByteArrayEncoder
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import org.webrtc.DefaultVideoDecoderFactory
 import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.EglBase
@@ -41,7 +37,6 @@ import java.nio.charset.Charset
 
 class ScreenCaptureService : Service() {
     private val context = this
-    private val lifecycleScope = MainScope()
 
     private val bossGroup = NioEventLoopGroup()
     private val workerGroup = NioEventLoopGroup()
@@ -76,12 +71,11 @@ class ScreenCaptureService : Service() {
         super.onDestroy()
         workerGroup.shutdownGracefully()
         bossGroup.shutdownGracefully()
-        lifecycleScope.cancel()
     }
 
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val screenCaptureIntent = intent?.getParcelableExtra<Intent?>(ScreenCaptureIntent)
+        val screenCaptureIntent = intent?.getParcelableExtra<Intent?>(SCREEN_CAPTURE_INTENT)
         if (screenCaptureIntent != null) {
             ScreenCapturerAndroid(screenCaptureIntent, object : MediaProjection.Callback() {
                 override fun onStop() {
@@ -97,7 +91,7 @@ class ScreenCaptureService : Service() {
 
 
     private fun startServer() {
-        lifecycleScope.launch(Dispatchers.IO) {
+        Thread {
             try {
                 ServerBootstrap()
                     .group(bossGroup, workerGroup)
@@ -114,59 +108,28 @@ class ScreenCaptureService : Service() {
 
 
                                     override fun channelActive(ctx: ChannelHandlerContext) {
-                                        createOffer(ctx)
-                                    }
-
-                                    override fun channelInactive(ctx: ChannelHandlerContext) {
-                                        disposeOffer(ctx)
-                                    }
-
-                                    override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
-                                        handlerMsg(ctx, msg)
-                                    }
-
-                                    private fun createOffer(ctx: ChannelHandlerContext) {
                                         //创建对等连接
-                                        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver() {
+                                        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : EmptyPeerConnectionObserver() {
                                             override fun onIceCandidate(iceCandidate: IceCandidate) {
-                                                val buffer = PooledByteBufAllocator.DEFAULT.buffer(
-                                                    4 * Int.SIZE_BYTES + iceCandidate.sdpMid.length + iceCandidate.sdp.length
-
-                                                )
-                                                buffer.writeInt(1)
-                                                buffer.writeInt(iceCandidate.sdpMid.length)
-                                                buffer.writeCharSequence(iceCandidate.sdpMid, Charset.defaultCharset())
-                                                buffer.writeInt(iceCandidate.sdpMLineIndex)
-                                                buffer.writeInt(iceCandidate.sdp.length)
-                                                buffer.writeCharSequence(iceCandidate.sdp, Charset.defaultCharset())
-                                                ctx.writeAndFlush(buffer)
+                                                send(ctx, iceCandidate)
                                             }
                                         })
 
                                         peerConnection?.addTrack(videoTrack)
-                                        peerConnection?.createOffer(object : SimpleSdpObserver() {
+                                        peerConnection?.createOffer(object : EmptySdpObserver() {
                                             override fun onCreateSuccess(description: SessionDescription) {
-                                                peerConnection?.setLocalDescription(SimpleSdpObserver(), description)
-                                                val buffer = PooledByteBufAllocator.DEFAULT.buffer(
-                                                    3 * Int.SIZE_BYTES + description.type.name.length + description.description.length
-
-                                                )
-                                                buffer.writeInt(3)
-                                                buffer.writeInt(description.type.name.length)
-                                                buffer.writeCharSequence(description.type.name, Charset.defaultCharset())
-                                                buffer.writeInt(description.description.length)
-                                                buffer.writeCharSequence(description.description, Charset.defaultCharset())
-                                                ctx.writeAndFlush(buffer)
+                                                peerConnection?.setLocalDescription(EmptySdpObserver(), description)
+                                                send(ctx, description)
                                             }
                                         }, MediaConstraints())
                                     }
 
-                                    private fun disposeOffer(ctx: ChannelHandlerContext) {
+                                    override fun channelInactive(ctx: ChannelHandlerContext) {
                                         peerConnection?.dispose()
                                         peerConnection = null
                                     }
 
-                                    private fun handlerMsg(ctx: ChannelHandlerContext, msg: ByteArray) {
+                                    override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
                                         val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(msg.size)
                                         byteBuf.writeBytes(msg)
                                         val type = byteBuf.readInt()
@@ -183,29 +146,28 @@ class ScreenCaptureService : Service() {
                                                 val type = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
                                                 val description = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
                                                 val sdp = SessionDescription(SessionDescription.Type.valueOf(type), description)
-
-                                                // 接收远端sdp并将自身sdp发送给远端完成sdp交换
-                                                peerConnection?.setRemoteDescription(SimpleSdpObserver(), sdp)
-                                                // 只有设置了远端sdp才能createAnswer
-                                                peerConnection?.createAnswer(object : SimpleSdpObserver() {}, MediaConstraints())
+                                                peerConnection?.setRemoteDescription(EmptySdpObserver(), sdp)
+                                                peerConnection?.createAnswer(object : EmptySdpObserver() {}, MediaConstraints())
                                             }
-
-
-                                            else -> {}
                                         }
                                     }
-
                                 })
                         }
-                    }).bind(8888).sync().channel().closeFuture().sync()
+                    })
+                    .bind(40000)//
+                    .sync()//
+                    .channel()//
+                    .closeFuture()//
+                    .sync()//
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
                 bossGroup.shutdownGracefully()
                 workerGroup.shutdownGracefully()
             }
-        }
+        }.start()
     }
+
 
     private fun startForeground() {
         val groupId = "screenRecordingGroup"
@@ -237,12 +199,12 @@ class ScreenCaptureService : Service() {
     }
 
     companion object {
-        const val ScreenCaptureIntent = "screenCaptureIntent"
+        private const val SCREEN_CAPTURE_INTENT = "SCREEN_CAPTURE_INTENT"
 
         @JvmStatic
         fun start(context: Context, screenCaptureIntent: Intent?) {
             val intent = Intent(context, ScreenCaptureService::class.java)
-                .putExtra(ScreenCaptureIntent, screenCaptureIntent)
+                .putExtra(SCREEN_CAPTURE_INTENT, screenCaptureIntent)
             context.startService(intent)
         }
 
