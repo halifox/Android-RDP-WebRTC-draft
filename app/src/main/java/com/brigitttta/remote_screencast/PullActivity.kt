@@ -86,7 +86,7 @@ class PullActivity : AppCompatActivity() {
                     .handler(object : ChannelInitializer<SocketChannel>() {
                         override fun initChannel(channel: SocketChannel) {
                             channel.pipeline()
-                                .addLast("frameDecoder", LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4))
+                                .addLast("frameDecoder", LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
                                 .addLast("bytesDecoder", ByteArrayDecoder())
                                 .addLast("frameEncoder", LengthFieldPrepender(4))
                                 .addLast("bytesEncoder", ByteArrayEncoder())

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjection
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationChannelGroupCompat
 import androidx.core.app.NotificationCompat
@@ -105,7 +106,7 @@ class ScreenCaptureService : Service() {
                     .childHandler(object : ChannelInitializer<SocketChannel>() {
                         override fun initChannel(channel: SocketChannel) {
                             channel.pipeline()
-                                .addLast("frameDecoder", LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4))
+                                .addLast("frameDecoder", LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
                                 .addLast("bytesDecoder", ByteArrayDecoder())
                                 .addLast("frameEncoder", LengthFieldPrepender(4))
                                 .addLast("bytesEncoder", ByteArrayEncoder())
@@ -129,6 +130,7 @@ class ScreenCaptureService : Service() {
                                         //创建对等连接
                                         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver() {
                                             override fun onIceCandidate(iceCandidate: IceCandidate) {
+                                                Log.d("TAG", "onIceCandidate:${4 * Int.SIZE_BYTES + iceCandidate.sdpMid.length + iceCandidate.sdp.length} ")
                                                 val buffer = PooledByteBufAllocator.DEFAULT.buffer(
                                                     4 * Int.SIZE_BYTES + iceCandidate.sdpMid.length + iceCandidate.sdp.length
 
@@ -147,6 +149,7 @@ class ScreenCaptureService : Service() {
                                         peerConnection?.createOffer(object : SimpleSdpObserver() {
                                             override fun onCreateSuccess(description: SessionDescription) {
                                                 peerConnection?.setLocalDescription(SimpleSdpObserver(), description)
+                                                Log.d("TAG", "createOffer onCreateSuccess:${3 * Int.SIZE_BYTES + description.type.name.length + description.description.length} ")
 
                                                 val buffer = PooledByteBufAllocator.DEFAULT.buffer(
                                                     3 * Int.SIZE_BYTES + description.type.name.length + description.description.length
@@ -184,6 +187,7 @@ class ScreenCaptureService : Service() {
                                                 // 只有设置了远端sdp才能createAnswer
                                                 peerConnection?.createAnswer(object : SimpleSdpObserver() {
                                                     override fun onCreateSuccess(description: SessionDescription) {
+                                                        Log.d("TAG", "createAnswer onCreateSuccess:${3 * Int.SIZE_BYTES + description.type.name.length + description.description.length} ")
                                                         peerConnection?.setLocalDescription(SimpleSdpObserver(), description)
                                                         val buffer = PooledByteBufAllocator.DEFAULT.buffer(
                                                             3 * Int.SIZE_BYTES + description.type.name.length + description.description.length
