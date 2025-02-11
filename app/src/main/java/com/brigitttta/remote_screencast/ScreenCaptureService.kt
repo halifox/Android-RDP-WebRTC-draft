@@ -106,10 +106,10 @@ class ScreenCaptureService : Service() {
                     .childHandler(object : ChannelInitializer<SocketChannel>() {
                         override fun initChannel(channel: SocketChannel) {
                             channel.pipeline()
-                                .addLast("frameDecoder", LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
-                                .addLast("bytesDecoder", ByteArrayDecoder())
-                                .addLast("frameEncoder", LengthFieldPrepender(4))
-                                .addLast("bytesEncoder", ByteArrayEncoder())
+                                .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
+                                .addLast(LengthFieldPrepender(4))
+                                .addLast(ByteArrayDecoder())
+                                .addLast(ByteArrayEncoder())
                                 .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
                                     private var peerConnection: PeerConnection? = null
 
@@ -141,7 +141,8 @@ class ScreenCaptureService : Service() {
                                                 buffer.writeInt(iceCandidate.sdpMLineIndex)
                                                 buffer.writeInt(iceCandidate.sdp.length)
                                                 buffer.writeCharSequence(iceCandidate.sdp, Charset.defaultCharset())
-                                                ctx.writeAndFlush(buffer.array())
+                                                ctx.writeAndFlush(buffer)
+                                                Log.d("TAG", "writeAndFlush:${buffer.array().size} ")
                                             }
                                         })
 
@@ -160,7 +161,8 @@ class ScreenCaptureService : Service() {
                                                 buffer.writeCharSequence(description.type.name, Charset.defaultCharset())
                                                 buffer.writeInt(description.description.length)
                                                 buffer.writeCharSequence(description.description, Charset.defaultCharset())
-                                                ctx.writeAndFlush(buffer.array())
+                                                ctx.writeAndFlush(buffer)
+                                                Log.d("TAG", "writeAndFlush:${buffer.array().size} ")
                                             }
                                         }, MediaConstraints())
                                     }
@@ -174,6 +176,7 @@ class ScreenCaptureService : Service() {
                                         val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(msg.size)
                                         byteBuf.writeBytes(msg)
                                         val type = byteBuf.readInt()
+                                        Log.d("TAG", "handlerMsg:${type} ${msg.size} ")
 
 
                                         when (type) {
@@ -197,7 +200,10 @@ class ScreenCaptureService : Service() {
                                                         buffer.writeCharSequence(description.type.name, Charset.defaultCharset())
                                                         buffer.writeInt(description.description.length)
                                                         buffer.writeCharSequence(description.description, Charset.defaultCharset())
-                                                        ctx.writeAndFlush(buffer.array())
+
+                                                        ctx.writeAndFlush(buffer)
+                                                        Log.d("TAG", "writeAndFlush:${buffer.array().size} ")
+
                                                     }
                                                 }, MediaConstraints())
                                             }

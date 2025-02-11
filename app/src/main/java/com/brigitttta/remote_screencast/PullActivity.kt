@@ -86,10 +86,10 @@ class PullActivity : AppCompatActivity() {
                     .handler(object : ChannelInitializer<SocketChannel>() {
                         override fun initChannel(channel: SocketChannel) {
                             channel.pipeline()
-                                .addLast("frameDecoder", LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
-                                .addLast("bytesDecoder", ByteArrayDecoder())
-                                .addLast("frameEncoder", LengthFieldPrepender(4))
-                                .addLast("bytesEncoder", ByteArrayEncoder())
+                                .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
+                                .addLast(LengthFieldPrepender(4))
+                                .addLast(ByteArrayDecoder())
+                                .addLast(ByteArrayEncoder())
                                 .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
                                     private var peerConnection: PeerConnection? = null
 
@@ -123,7 +123,9 @@ class PullActivity : AppCompatActivity() {
                                                 buffer.writeInt(iceCandidate.sdpMLineIndex)
                                                 buffer.writeInt(iceCandidate.sdp.length)
                                                 buffer.writeCharSequence(iceCandidate.sdp, Charset.defaultCharset())
-                                                ctx.writeAndFlush(buffer.array())
+                                                ctx.writeAndFlush(buffer)
+                                                Log.d("TAG", "writeAndFlush:${buffer.array().size} ")
+
                                             }
                                         })
 
@@ -142,6 +144,8 @@ class PullActivity : AppCompatActivity() {
                                         val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(msg.size)
                                         byteBuf.writeBytes(msg)
                                         val type = byteBuf.readInt()
+                                        Log.d("TAG", "handlerMsg:${type} ${msg.size} ")
+
                                         when (type) {
                                             2 -> {
                                                 val type = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
@@ -161,7 +165,9 @@ class PullActivity : AppCompatActivity() {
                                                         buffer.writeCharSequence(description.type.name, Charset.defaultCharset())
                                                         buffer.writeInt(description.description.length)
                                                         buffer.writeCharSequence(description.description, Charset.defaultCharset())
-                                                        ctx.writeAndFlush(buffer.array())
+                                                        ctx.writeAndFlush(buffer)
+                                                        Log.d("TAG", "writeAndFlush:${buffer.array().size} ")
+
                                                     }
                                                 }, MediaConstraints())
                                             }
