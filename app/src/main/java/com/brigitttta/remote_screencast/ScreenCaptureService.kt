@@ -5,13 +5,13 @@ import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjection
 import android.os.IBinder
-import android.util.Size
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationChannelGroupCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.blankj.utilcode.util.ScreenUtils
 import io.netty.bootstrap.ServerBootstrap
+import io.netty.buffer.PooledByteBufAllocator
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.SimpleChannelInboundHandler
@@ -20,9 +20,8 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import io.netty.handler.codec.LengthFieldPrepender
-import io.netty.handler.codec.string.StringDecoder
-import io.netty.handler.codec.string.StringEncoder
-import io.netty.util.CharsetUtil
+import io.netty.handler.codec.bytes.ByteArrayDecoder
+import io.netty.handler.codec.bytes.ByteArrayEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -37,6 +36,8 @@ import org.webrtc.PeerConnectionFactory
 import org.webrtc.ScreenCapturerAndroid
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceTextureHelper
+import java.nio.charset.Charset
+
 
 class ScreenCaptureService : Service() {
     private val context = this
@@ -57,6 +58,13 @@ class ScreenCaptureService : Service() {
     private val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext, true)
     private val videoSource = peerConnectionFactory.createVideoSource(true, true)
     private val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
+    private val rtcConfig = PeerConnection.RTCConfiguration(emptyList()).apply {
+        tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
+        bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
+        rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
+        continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
+        keyType = PeerConnection.KeyType.ECDSA
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -97,14 +105,13 @@ class ScreenCaptureService : Service() {
                     .childHandler(object : ChannelInitializer<SocketChannel>() {
                         override fun initChannel(channel: SocketChannel) {
                             channel.pipeline()
-                                .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
-                                .addLast(LengthFieldPrepender(4))
-                                .addLast(StringDecoder(CharsetUtil.UTF_8))
-                                .addLast(StringEncoder(CharsetUtil.UTF_8))
-                                .addLast(object : SimpleChannelInboundHandler<String>() {
+                                .addLast("frameDecoder", LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4))
+                                .addLast("bytesDecoder", ByteArrayDecoder())
+                                .addLast("frameEncoder", LengthFieldPrepender(4))
+                                .addLast("bytesEncoder", ByteArrayEncoder())
+                                .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
                                     private var peerConnection: PeerConnection? = null
 
-                                    private var downTime = 0L
 
                                     override fun channelActive(ctx: ChannelHandlerContext) {
                                         createOffer(ctx)
@@ -114,28 +121,25 @@ class ScreenCaptureService : Service() {
                                         disposeOffer(ctx)
                                     }
 
-                                    override fun channelRead0(ctx: ChannelHandlerContext, msg: String) {
+                                    override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
                                         handlerMsg(ctx, msg)
                                     }
 
                                     private fun createOffer(ctx: ChannelHandlerContext) {
-                                        //发送设备尺寸
-                                        ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SIZE, size = Size(screenWidth, screenHeight)).toString())
-
-                                        //RTC配置
-                                        val rtcConfig = PeerConnection.RTCConfiguration(emptyList()).apply {
-                                            tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
-                                            bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
-                                            rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
-                                            continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
-                                            keyType = PeerConnection.KeyType.ECDSA
-                                        }
-
                                         //创建对等连接
                                         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver() {
                                             override fun onIceCandidate(iceCandidate: IceCandidate) {
-                                                //发送 连接两端的主机的网络地址
-                                                ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.ICE, iceCandidate = iceCandidate).toString())
+                                                val buffer = PooledByteBufAllocator.DEFAULT.buffer(
+                                                    4 * Int.SIZE_BYTES + iceCandidate.sdpMid.length + iceCandidate.sdp.length
+
+                                                )
+                                                buffer.writeInt(1)
+                                                buffer.writeInt(iceCandidate.sdpMid.length)
+                                                buffer.writeCharSequence(iceCandidate.sdpMid, Charset.defaultCharset())
+                                                buffer.writeInt(iceCandidate.sdpMLineIndex)
+                                                buffer.writeInt(iceCandidate.sdp.length)
+                                                buffer.writeCharSequence(iceCandidate.sdp, Charset.defaultCharset())
+                                                ctx.writeAndFlush(buffer.array())
                                             }
                                         })
 
@@ -143,7 +147,17 @@ class ScreenCaptureService : Service() {
                                         peerConnection?.createOffer(object : SimpleSdpObserver() {
                                             override fun onCreateSuccess(description: SessionDescription) {
                                                 peerConnection?.setLocalDescription(SimpleSdpObserver(), description)
-                                                ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SDP, description = description).toString())
+
+                                                val buffer = PooledByteBufAllocator.DEFAULT.buffer(
+                                                    3 * Int.SIZE_BYTES + description.type.name.length + description.description.length
+
+                                                )
+                                                buffer.writeInt(2)
+                                                buffer.writeInt(description.type.name.length)
+                                                buffer.writeCharSequence(description.type.name, Charset.defaultCharset())
+                                                buffer.writeInt(description.description.length)
+                                                buffer.writeCharSequence(description.description, Charset.defaultCharset())
+                                                ctx.writeAndFlush(buffer.array())
                                             }
                                         }, MediaConstraints())
                                     }
@@ -153,26 +167,43 @@ class ScreenCaptureService : Service() {
                                         peerConnection = null
                                     }
 
-                                    private fun handlerMsg(ctx: ChannelHandlerContext, msg: String) {
-                                        val webrtcMessage = WebrtcMessage(msg)
+                                    private fun handlerMsg(ctx: ChannelHandlerContext, msg: ByteArray) {
+                                        val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(msg.size)
+                                        byteBuf.writeBytes(msg)
+                                        val type = byteBuf.readInt()
 
-                                        when (webrtcMessage.type) {
-                                            WebrtcMessage.Type.SDP -> {
+
+                                        when (type) {
+                                            2 -> {
+                                                val type = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                                val description = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                                val sdp = SessionDescription(SessionDescription.Type.valueOf(type), description)
+
                                                 // 接收远端sdp并将自身sdp发送给远端完成sdp交换
-                                                peerConnection?.setRemoteDescription(SimpleSdpObserver(), webrtcMessage.description)
+                                                peerConnection?.setRemoteDescription(SimpleSdpObserver(), sdp)
                                                 // 只有设置了远端sdp才能createAnswer
                                                 peerConnection?.createAnswer(object : SimpleSdpObserver() {
                                                     override fun onCreateSuccess(description: SessionDescription) {
                                                         peerConnection?.setLocalDescription(SimpleSdpObserver(), description)
-                                                        ctx.writeAndFlush(WebrtcMessage(type = WebrtcMessage.Type.SDP, description = description).toString())
+                                                        val buffer = PooledByteBufAllocator.DEFAULT.buffer(
+                                                            3 * Int.SIZE_BYTES + description.type.name.length + description.description.length
+                                                        )
+                                                        buffer.writeInt(2)
+                                                        buffer.writeInt(description.type.name.length)
+                                                        buffer.writeCharSequence(description.type.name, Charset.defaultCharset())
+                                                        buffer.writeInt(description.description.length)
+                                                        buffer.writeCharSequence(description.description, Charset.defaultCharset())
+                                                        ctx.writeAndFlush(buffer.array())
                                                     }
                                                 }, MediaConstraints())
                                             }
 
-                                            WebrtcMessage.Type.ICE -> {
-                                                // 接收 连接两端的主机的网络地址
-                                                // 发送在PeerConnectionFactory.createPeerConnection.onIceCandidate(iceCandidate: IceCandidate)
-                                                peerConnection?.addIceCandidate(webrtcMessage.iceCandidate)
+                                            1 -> {
+                                                val sdpMid = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                                val sdpMLineIndex = byteBuf.readInt()
+                                                val sdp = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                                val iceCandidate = IceCandidate(sdpMid, sdpMLineIndex, sdp)
+                                                peerConnection?.addIceCandidate(iceCandidate)
                                             }
 
                                             else -> {}
