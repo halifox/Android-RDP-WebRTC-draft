@@ -188,24 +188,7 @@ class ScreenCaptureService : Service() {
                                                 // 接收远端sdp并将自身sdp发送给远端完成sdp交换
                                                 peerConnection?.setRemoteDescription(SimpleSdpObserver(), sdp)
                                                 // 只有设置了远端sdp才能createAnswer
-                                                peerConnection?.createAnswer(object : SimpleSdpObserver() {
-                                                    override fun onCreateSuccess(description: SessionDescription) {
-                                                        Log.d("TAG", "createAnswer onCreateSuccess:${3 * Int.SIZE_BYTES + description.type.name.length + description.description.length} ")
-                                                        peerConnection?.setLocalDescription(SimpleSdpObserver(), description)
-                                                        val buffer = PooledByteBufAllocator.DEFAULT.buffer(
-                                                            3 * Int.SIZE_BYTES + description.type.name.length + description.description.length
-                                                        )
-                                                        buffer.writeInt(2)
-                                                        buffer.writeInt(description.type.name.length)
-                                                        buffer.writeCharSequence(description.type.name, Charset.defaultCharset())
-                                                        buffer.writeInt(description.description.length)
-                                                        buffer.writeCharSequence(description.description, Charset.defaultCharset())
-
-                                                        ctx.writeAndFlush(buffer)
-                                                        Log.d("TAG", "writeAndFlush:${buffer.array().size} ")
-
-                                                    }
-                                                }, MediaConstraints())
+                                                peerConnection?.createAnswer(object : SimpleSdpObserver() {}, MediaConstraints())
                                             }
 
                                             1 -> {
