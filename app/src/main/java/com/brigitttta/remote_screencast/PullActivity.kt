@@ -2,7 +2,6 @@ package com.brigitttta.remote_screencast
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.brigitttta.remote_screencast.databinding.ActivityPullBinding
@@ -124,7 +123,6 @@ class PullActivity : AppCompatActivity() {
                                                 buffer.writeInt(iceCandidate.sdp.length)
                                                 buffer.writeCharSequence(iceCandidate.sdp, Charset.defaultCharset())
                                                 ctx.writeAndFlush(buffer)
-                                                Log.d("TAG", "writeAndFlush:${buffer.array().size} ")
 
                                             }
                                         })
@@ -144,10 +142,17 @@ class PullActivity : AppCompatActivity() {
                                         val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(msg.size)
                                         byteBuf.writeBytes(msg)
                                         val type = byteBuf.readInt()
-                                        Log.d("TAG", "handlerMsg:${type} ${msg.size} ")
 
                                         when (type) {
-                                            2 -> {
+                                            1 -> {
+                                                val sdpMid = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                                val sdpMLineIndex = byteBuf.readInt()
+                                                val sdp = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                                val iceCandidate = IceCandidate(sdpMid, sdpMLineIndex, sdp)
+                                                peerConnection?.addIceCandidate(iceCandidate)
+                                            }
+
+                                            3 -> {
                                                 val type = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
                                                 val description = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
                                                 val sdp = SessionDescription(SessionDescription.Type.valueOf(type), description)
@@ -166,18 +171,9 @@ class PullActivity : AppCompatActivity() {
                                                         buffer.writeInt(description.description.length)
                                                         buffer.writeCharSequence(description.description, Charset.defaultCharset())
                                                         ctx.writeAndFlush(buffer)
-                                                        Log.d("TAG", "writeAndFlush:${buffer.array().size} ")
 
                                                     }
                                                 }, MediaConstraints())
-                                            }
-
-                                            1 -> {
-                                                val sdpMid = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
-                                                val sdpMLineIndex = byteBuf.readInt()
-                                                val sdp = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
-                                                val iceCandidate = IceCandidate(sdpMid, sdpMLineIndex, sdp)
-                                                peerConnection?.addIceCandidate(iceCandidate)
                                             }
 
 
@@ -210,15 +206,10 @@ class PullActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "onDestroy: ")
         binding.SurfaceViewRenderer.clearImage()
         binding.SurfaceViewRenderer.release()
         eglBase.release()
         eventLoopGroup?.shutdownGracefully()
         mainScope.cancel()
-    }
-
-    companion object {
-        private const val TAG = "PullFragment"
     }
 }

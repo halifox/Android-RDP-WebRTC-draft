@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjection
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationChannelGroupCompat
 import androidx.core.app.NotificationCompat
@@ -130,7 +129,6 @@ class ScreenCaptureService : Service() {
                                         //创建对等连接
                                         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : SimplePeerConnectionObserver() {
                                             override fun onIceCandidate(iceCandidate: IceCandidate) {
-                                                Log.d("TAG", "onIceCandidate:${4 * Int.SIZE_BYTES + iceCandidate.sdpMid.length + iceCandidate.sdp.length} ")
                                                 val buffer = PooledByteBufAllocator.DEFAULT.buffer(
                                                     4 * Int.SIZE_BYTES + iceCandidate.sdpMid.length + iceCandidate.sdp.length
 
@@ -142,7 +140,6 @@ class ScreenCaptureService : Service() {
                                                 buffer.writeInt(iceCandidate.sdp.length)
                                                 buffer.writeCharSequence(iceCandidate.sdp, Charset.defaultCharset())
                                                 ctx.writeAndFlush(buffer)
-                                                Log.d("TAG", "writeAndFlush:${buffer.array().size} ")
                                             }
                                         })
 
@@ -150,19 +147,16 @@ class ScreenCaptureService : Service() {
                                         peerConnection?.createOffer(object : SimpleSdpObserver() {
                                             override fun onCreateSuccess(description: SessionDescription) {
                                                 peerConnection?.setLocalDescription(SimpleSdpObserver(), description)
-                                                Log.d("TAG", "createOffer onCreateSuccess:${3 * Int.SIZE_BYTES + description.type.name.length + description.description.length} ")
-
                                                 val buffer = PooledByteBufAllocator.DEFAULT.buffer(
                                                     3 * Int.SIZE_BYTES + description.type.name.length + description.description.length
 
                                                 )
-                                                buffer.writeInt(2)
+                                                buffer.writeInt(3)
                                                 buffer.writeInt(description.type.name.length)
                                                 buffer.writeCharSequence(description.type.name, Charset.defaultCharset())
                                                 buffer.writeInt(description.description.length)
                                                 buffer.writeCharSequence(description.description, Charset.defaultCharset())
                                                 ctx.writeAndFlush(buffer)
-                                                Log.d("TAG", "writeAndFlush:${buffer.array().size} ")
                                             }
                                         }, MediaConstraints())
                                     }
@@ -176,10 +170,15 @@ class ScreenCaptureService : Service() {
                                         val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(msg.size)
                                         byteBuf.writeBytes(msg)
                                         val type = byteBuf.readInt()
-                                        Log.d("TAG", "handlerMsg:${type} ${msg.size} ")
-
-
                                         when (type) {
+                                            1 -> {
+                                                val sdpMid = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                                val sdpMLineIndex = byteBuf.readInt()
+                                                val sdp = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
+                                                val iceCandidate = IceCandidate(sdpMid, sdpMLineIndex, sdp)
+                                                peerConnection?.addIceCandidate(iceCandidate)
+                                            }
+
                                             2 -> {
                                                 val type = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
                                                 val description = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
@@ -191,13 +190,6 @@ class ScreenCaptureService : Service() {
                                                 peerConnection?.createAnswer(object : SimpleSdpObserver() {}, MediaConstraints())
                                             }
 
-                                            1 -> {
-                                                val sdpMid = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
-                                                val sdpMLineIndex = byteBuf.readInt()
-                                                val sdp = byteBuf.readCharSequence(byteBuf.readInt(), Charset.defaultCharset()).toString()
-                                                val iceCandidate = IceCandidate(sdpMid, sdpMLineIndex, sdp)
-                                                peerConnection?.addIceCandidate(iceCandidate)
-                                            }
 
                                             else -> {}
                                         }
