@@ -50,6 +50,7 @@ dependencies {
 
 
     implementation("io.ktor:ktor-network:3.0.3")
+    implementation("io.netty:netty-all:4.1.17.Final")
     implementation("io.getstream:stream-webrtc-android:1.3.7")
     implementation ("com.blankj:utilcodex:1.31.0")
 }

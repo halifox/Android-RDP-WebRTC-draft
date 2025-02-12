@@ -6,10 +6,6 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true">
 
-    <org.webrtc.SurfaceViewRenderer
-        android:id="@+id/SurfaceViewRenderer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -17,45 +13,19 @@
         android:orientation="vertical">
 
 
-        <LinearLayout
-            android:id="@+id/control_penal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:visibility="gone"
-            tools:visibility="visible">
-
-            <Button
-                android:id="@+id/back"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="back" />
-
-            <Button
-                android:id="@+id/home"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="home" />
-
-            <Button
-                android:id="@+id/recents"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="recents" />
-        </LinearLayout>
 
         <Button
             android:id="@+id/slave"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="开启无障碍服务(受控端)" />
+            android:text="这是受控端" />
 
         <EditText
             android:id="@+id/host"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="受控端IP"
-            android:text="192.168.31.166" />
+            android:text="192.168.31.167" />
 
         <Button
             android:id="@+id/master"
