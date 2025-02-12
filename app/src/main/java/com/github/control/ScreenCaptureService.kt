@@ -54,13 +54,6 @@ class ScreenCaptureService : Service() {
     private val videoSource = peerConnectionFactory.createVideoSource(true, true)
     private val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
     private val rtcConfig = PeerConnection.RTCConfiguration(emptyList())
-        .apply {
-            tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
-            bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
-            rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
-            continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
-            keyType = PeerConnection.KeyType.ECDSA
-        }
 
     override fun onCreate() {
         super.onCreate()
