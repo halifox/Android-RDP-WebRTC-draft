@@ -22,7 +22,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="受控端IP"
-            android:text="192.168.137.5" />
+            android:text="192.168.137.149" />
 
         <Button
             android:id="@+id/master"

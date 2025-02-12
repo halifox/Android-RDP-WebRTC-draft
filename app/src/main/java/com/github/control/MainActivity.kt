@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity() {
         }
         binding.master.setOnClickListener {
             val host = binding.host.text.toString()
-            val intent = Intent(context, PullActivity::class.java)
+            val intent = Intent(context, PullActivityTCP::class.java)
             intent.putExtra("host", host)
             startActivity(intent)
         }
@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity() {
 
     private val screenCaptureLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         if (it.resultCode == RESULT_OK && it.data != null) {
-            ScreenCaptureService.start(context, it.data)
+            ScreenCaptureServiceTCP.start(context, it.data)
         }
     }
 
