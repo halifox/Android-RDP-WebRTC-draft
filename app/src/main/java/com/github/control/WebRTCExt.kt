@@ -35,7 +35,7 @@ fun send(ctx: ChannelHandlerContext, description: SessionDescription) {
     ctx.writeAndFlush(buffer)
 }
 
-fun send(ctx: ChannelHandlerContext, event: MotionEvent) {
+fun send(ctx: ChannelHandlerContext, event: MotionEvent,w:Int,h:Int) {
     val buffer = PooledByteBufAllocator.DEFAULT.buffer(9 * Int.SIZE_BYTES + Float.SIZE_BYTES)
 
     buffer.writeInt(ControlService.TYPE_MOTION_EVENT)
@@ -49,8 +49,8 @@ fun send(ctx: ChannelHandlerContext, event: MotionEvent) {
         event.getY(event.actionIndex)
             .toInt()
     )
-    buffer.writeInt(Controller.displayMetrics.widthPixels)
-    buffer.writeInt(Controller.displayMetrics.heightPixels)
+    buffer.writeInt(w)
+    buffer.writeInt(h)
     buffer.writeFloat(event.pressure)
     buffer.writeInt(event.actionButton)
     buffer.writeInt(event.buttonState)

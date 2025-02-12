@@ -61,7 +61,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        ScreenCaptureService.stop(context)
+//        ScreenCaptureService.stop(context)
         super.onDestroy()
     }
 

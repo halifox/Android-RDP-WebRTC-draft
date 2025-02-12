@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjection
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationChannelGroupCompat
 import androidx.core.app.NotificationCompat
@@ -63,12 +64,14 @@ class ScreenCaptureService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        Log.d("TAG", "onCreate: ")
         startForeground()
         startServer()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        Log.d("TAG", "onDestroy: ")
         workerGroup.shutdownGracefully()
         bossGroup.shutdownGracefully()
         eglBase.release()
@@ -76,6 +79,7 @@ class ScreenCaptureService : Service() {
 
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d("TAG", "onStartCommand: ")
         val screenCaptureIntent = intent?.getParcelableExtra<Intent?>(SCREEN_CAPTURE_INTENT)
         if (screenCaptureIntent != null) {
             ScreenCapturerAndroid(screenCaptureIntent, object : MediaProjection.Callback() {

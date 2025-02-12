@@ -71,15 +71,7 @@ class PullActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPullBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.SurfaceViewRenderer.init(eglBaseContext, object : RendererCommon.RendererEvents {
-            override fun onFirstFrameRendered() {
-                Log.d("TAG", "onFirstFrameRendered: ")
-            }
-
-            override fun onFrameResolutionChanged(videoWidth: Int, videoHeight: Int, rotation: Int) {
-                Log.d("TAG", "onFrameResolutionChanged:videoWidth:${videoWidth} videoHeight:${videoHeight} rotation:${rotation}")
-            }
-        })
+        binding.SurfaceViewRenderer.init(eglBaseContext, null)
         binding.SurfaceViewRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT,RendererCommon.ScalingType.SCALE_ASPECT_FIT);
         initService()
         initService2()
@@ -211,7 +203,7 @@ class PullActivity : AppCompatActivity() {
                             override fun channelActive(ctx: ChannelHandlerContext) {
                                 coroutineScope.launch {
                                     eventChannel.consumeEach { event ->
-                                        send(ctx, event)
+                                        send(ctx, event,binding.SurfaceViewRenderer.width,binding.SurfaceViewRenderer.height)
                                     }
                                 }
                                 coroutineScope.launch {
