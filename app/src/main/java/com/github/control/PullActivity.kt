@@ -2,6 +2,7 @@ package com.github.control
 
 import android.accessibilityservice.AccessibilityService
 import android.os.Bundle
+import android.util.Log
 import android.view.MotionEvent
 import androidx.appcompat.app.AppCompatActivity
 import com.github.control.databinding.ActivityPullBinding
@@ -30,6 +31,7 @@ import org.webrtc.MediaConstraints
 import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
+import org.webrtc.RendererCommon
 import org.webrtc.RtpReceiver
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceTextureHelper
@@ -69,7 +71,16 @@ class PullActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPullBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.SurfaceViewRenderer.init(eglBaseContext, null)
+        binding.SurfaceViewRenderer.init(eglBaseContext, object : RendererCommon.RendererEvents {
+            override fun onFirstFrameRendered() {
+                Log.d("TAG", "onFirstFrameRendered: ")
+            }
+
+            override fun onFrameResolutionChanged(videoWidth: Int, videoHeight: Int, rotation: Int) {
+                Log.d("TAG", "onFrameResolutionChanged:videoWidth:${videoWidth} videoHeight:${videoHeight} rotation:${rotation}")
+            }
+        })
+        binding.SurfaceViewRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT,RendererCommon.ScalingType.SCALE_ASPECT_FIT);
         initService()
         initService2()
     }
@@ -243,6 +254,7 @@ class PullActivity : AppCompatActivity() {
 
 
     override fun onDestroy() {
+        super.onDestroy()
         binding.SurfaceViewRenderer.clearImage()
         binding.SurfaceViewRenderer.release()
         eventLoopGroup.shutdownGracefully()
