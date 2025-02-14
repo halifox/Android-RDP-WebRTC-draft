@@ -2,10 +2,13 @@ package com.github.control
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.media.MediaCodecList
+import android.media.MediaFormat
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.os.Process
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.github.control.databinding.ActivityMainBinding
@@ -26,6 +29,18 @@ class MainActivity : AppCompatActivity() {
 
         Controller.updateDisplayMetrics(context)
 
+
+        val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
+        val codecs = codecList.codecInfos
+        for (codec in codecs) {
+            Log.d("CodecInfo", "Codec Name: " + codec.name)
+        }
+
+
+        val videoFormat = MediaFormat.createVideoFormat("video/av01", 1280, 800)
+
+        println(codecList.findEncoderForFormat(videoFormat))
+        println(codecList.findDecoderForFormat(videoFormat))
 
         binding.slave.setOnClickListener {
             if (!isAccessibilityEnabled()) {

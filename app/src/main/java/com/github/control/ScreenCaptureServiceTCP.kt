@@ -8,6 +8,7 @@ import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
+import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
@@ -80,15 +81,17 @@ class ScreenCaptureServiceTCP : Service() {
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
                         .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
-                            val videoFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 1280, 800)
+                            val videoFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_VP9, 1280, 800)
                                 .apply {
-                                    setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
-                                    setInteger(MediaFormat.KEY_BIT_RATE, 400_000)
-                                    setInteger(MediaFormat.KEY_FRAME_RATE, 15)
-                                    setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
+                                    setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)  // 硬件加速
+                                    setInteger(MediaFormat.KEY_BIT_RATE, 1_000_000)  // 足够的比特率，避免过低影响质量
+                                    setInteger(MediaFormat.KEY_FRAME_RATE, 60)  // 高帧率减少延迟
+                                    setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)  // 每帧都是 I 帧
                                 }
 
-                            val mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+
+
+                            val mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_VP9)
                                 .apply {
                                     configure(videoFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
                                 }
