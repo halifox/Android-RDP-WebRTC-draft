@@ -44,8 +44,8 @@ class PullActivityTCP : AppCompatActivity() {
 
         binding.SurfaceView.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
-                val mediaFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_VP9, 1280, 800)
-                decoder = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_VP9)
+                val mediaFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 1280, 800)
+                decoder = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
                     .apply {
                         configure(mediaFormat, holder.surface, null, 0)
                         start()

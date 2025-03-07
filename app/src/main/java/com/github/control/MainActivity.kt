@@ -29,19 +29,6 @@ class MainActivity : AppCompatActivity() {
 
         Controller.updateDisplayMetrics(context)
 
-
-        val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
-        val codecs = codecList.codecInfos
-        for (codec in codecs) {
-            Log.d("CodecInfo", "Codec Name: " + codec.name)
-        }
-
-
-        val videoFormat = MediaFormat.createVideoFormat("video/av01", 1280, 800)
-
-        println(codecList.findEncoderForFormat(videoFormat))
-        println(codecList.findDecoderForFormat(videoFormat))
-
         binding.slave.setOnClickListener {
             if (!isAccessibilityEnabled()) {
                 MaterialAlertDialogBuilder(context)

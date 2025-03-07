@@ -81,7 +81,7 @@ class ScreenCaptureServiceTCP : Service() {
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
                         .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
-                            val videoFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_VP9, 1280, 800)
+                            val videoFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 1280, 800)
                                 .apply {
                                     setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)  // 硬件加速
                                     setInteger(MediaFormat.KEY_BIT_RATE, 1_000_000)  // 足够的比特率，避免过低影响质量
@@ -91,7 +91,7 @@ class ScreenCaptureServiceTCP : Service() {
 
 
 
-                            val mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_VP9)
+                            val mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
                                 .apply {
                                     configure(videoFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
                                 }
