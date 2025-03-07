@@ -18,7 +18,8 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import io.netty.handler.codec.LengthFieldPrepender
 import io.netty.handler.codec.bytes.ByteArrayDecoder
 import io.netty.handler.codec.bytes.ByteArrayEncoder
-import kotlinx.coroutines.flow.MutableStateFlow
+import io.netty.util.ReferenceCountUtil
+import kotlinx.coroutines.channels.Channel
 import org.webrtc.DefaultVideoDecoderFactory
 import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.EglBase
@@ -63,28 +64,25 @@ class PullActivity : AppCompatActivity() {
         binding.SurfaceViewRenderer.init(eglBaseContext, null)
         binding.SurfaceViewRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT, RendererCommon.ScalingType.SCALE_ASPECT_FIT);
         initScreenCaptureService()
-//        initControlService()
     }
 
-    private val flow = MutableStateFlow<Event>(EmptyEvent)
-//    private val eventChannel = Channel<MotionEvent>(Channel.BUFFERED)
-//    private val actionChannel = Channel<Int>(Channel.BUFFERED)
+    private val eventChannel = Channel<Event>(Channel.BUFFERED)
 
     override fun onStart() {
         super.onStart()
         binding.SurfaceViewRenderer.setOnTouchListener { _, event ->
-            flow.tryEmit(TouchEvent(event, binding.SurfaceViewRenderer.width, binding.SurfaceViewRenderer.height))
+            eventChannel.trySend(TouchEvent(event, binding.SurfaceViewRenderer.width, binding.SurfaceViewRenderer.height))
             true
         }
 
         binding.back.setOnClickListener {
-            flow.tryEmit(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_BACK))
+            eventChannel.trySend(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_BACK))
         }
         binding.home.setOnClickListener {
-            flow.tryEmit(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_HOME))
+            eventChannel.trySend(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_HOME))
         }
         binding.recents.setOnClickListener {
-            flow.tryEmit(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_RECENTS))
+            eventChannel.trySend(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_RECENTS))
         }
     }
 
@@ -100,11 +98,12 @@ class PullActivity : AppCompatActivity() {
                         .addLast(LengthFieldPrepender(4))
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
-                        .addLast(ControlOutboundHandler(flow))
+                        .addLast(ControlOutboundHandler(eventChannel))
                         .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
                             private var peerConnection: PeerConnection? = null
 
                             override fun channelActive(ctx: ChannelHandlerContext) {
+                                super.channelActive(ctx)
                                 peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : EmptyPeerConnectionObserver() {
                                     override fun onAddTrack(rtpReceiver: RtpReceiver, mediaStreams: Array<out MediaStream>) {
                                         val track = rtpReceiver.track()
@@ -124,6 +123,7 @@ class PullActivity : AppCompatActivity() {
 
                             //信道不活跃消息
                             override fun channelInactive(ctx: ChannelHandlerContext?) {
+                                super.channelInactive(ctx)
                                 binding.SurfaceViewRenderer.clearImage()
                                 peerConnection?.dispose()
                                 peerConnection = null
@@ -131,6 +131,7 @@ class PullActivity : AppCompatActivity() {
 
                             //信道读消息
                             override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
+                                ctx.fireChannelRead(ReferenceCountUtil.retain(msg))
                                 val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(msg.size)
                                 byteBuf.writeBytes(msg)
                                 val type = byteBuf.readInt()
@@ -152,10 +153,12 @@ class PullActivity : AppCompatActivity() {
                                         }, MediaConstraints())
                                     }
 
-                                    else -> {}
+                                    else -> {
+                                    }
                                 }
                             }
                         })
+
                 }
             })
             .connect(inetHost, 40000)

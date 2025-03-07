@@ -56,7 +56,7 @@
             android:exported="true"
             android:foregroundServiceType="mediaProjection" />
         <service
-            android:name=".ControlService"
+            android:name=".MyAccessibilityService"
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">

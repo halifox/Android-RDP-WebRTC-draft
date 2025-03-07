@@ -23,6 +23,7 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import io.netty.handler.codec.LengthFieldPrepender
 import io.netty.handler.codec.bytes.ByteArrayDecoder
 import io.netty.handler.codec.bytes.ByteArrayEncoder
+import io.netty.util.ReferenceCountUtil
 import org.koin.android.ext.android.inject
 import org.webrtc.DefaultVideoDecoderFactory
 import org.webrtc.DefaultVideoEncoderFactory
@@ -106,6 +107,7 @@ class ScreenCaptureService : LifecycleService() {
                         .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
                             private var peerConnection: PeerConnection? = null
                             override fun channelActive(ctx: ChannelHandlerContext) {
+                                super.channelActive(ctx)
                                 peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : EmptyPeerConnectionObserver() {
                                     override fun onIceCandidate(iceCandidate: IceCandidate) {
                                         send(ctx, iceCandidate)
@@ -123,11 +125,15 @@ class ScreenCaptureService : LifecycleService() {
                             }
 
                             override fun channelInactive(ctx: ChannelHandlerContext) {
+                                super.channelInactive(ctx)
                                 peerConnection?.dispose()
                                 peerConnection = null
                             }
 
                             override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
+                                Log.d("SimpleChannelInboundHandler", "channelRead0:${msg} ")
+
+                                ctx.fireChannelRead(ReferenceCountUtil.retain(msg))
                                 val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(msg.size)
                                 byteBuf.writeBytes(msg)
                                 val type = byteBuf.readInt()
@@ -151,9 +157,14 @@ class ScreenCaptureService : LifecycleService() {
                                         peerConnection?.setRemoteDescription(EmptySdpObserver(), sdp)
                                         peerConnection?.createAnswer(object : EmptySdpObserver() {}, MediaConstraints())
                                     }
+
+                                    else -> {
+                                    }
                                 }
                             }
                         })
+
+
                 }
             })
             .bind(40000)

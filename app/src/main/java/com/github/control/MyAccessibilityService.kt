@@ -8,7 +8,7 @@ import org.koin.android.ext.android.inject
 import org.koin.core.component.KoinComponent
 
 
-class ControlService : AccessibilityService(), KoinComponent {
+class MyAccessibilityService : AccessibilityService(), KoinComponent {
     private val controller by inject<Controller>()
     private val inputEventControllerDelegate = InputEventControllerDelegate(this)
 

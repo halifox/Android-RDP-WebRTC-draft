@@ -33,7 +33,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.blankj.utilcode.util.ServiceUtils
-import com.github.control.ControlService
+import com.github.control.MyAccessibilityService
 import com.github.control.ScreenCaptureService
 import org.koin.compose.koinInject
 
@@ -160,7 +160,7 @@ private fun isServiceRunning(context: Context): Boolean {
 
 private fun isAccessibilityEnabled(context: Context): Boolean {
     val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-    return enabledServices != null && enabledServices.contains(ControlService::class.java.name)
+    return enabledServices != null && enabledServices.contains(MyAccessibilityService::class.java.name)
 }
 
 private fun openAccessibilitySettings(context: Context) {
