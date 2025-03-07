@@ -11,6 +11,10 @@ import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 
+import com.blankj.utilcode.util.AppUtils;
+import com.blankj.utilcode.util.DeviceUtils;
+import com.blankj.utilcode.util.ScreenUtils;
+
 import java.lang.reflect.Method;
 
 public class Controller {
@@ -160,8 +164,8 @@ public class Controller {
     }
 
     public Point mapToScreen(@NonNull Position position) {
-        int x = displayMetrics.widthPixels * position.getPoint().getX() / position.getScreenSize().getWidth();
-        int y = displayMetrics.heightPixels * position.getPoint().getY() / position.getScreenSize().getHeight();
+        int x = ScreenUtils.getScreenWidth() * position.getPoint().getX() / position.getScreenSize().getWidth();
+        int y = ScreenUtils.getScreenHeight() * position.getPoint().getY() / position.getScreenSize().getHeight();
         return new Point(x, y);
     }
 
@@ -183,6 +187,7 @@ public class Controller {
         }
     }
 
+    @Deprecated
     public static void updateDisplayMetrics(@NonNull Context context) {
         WindowManager windowManager = context.getSystemService(WindowManager.class);
         windowManager.getDefaultDisplay().getMetrics(displayMetrics);
