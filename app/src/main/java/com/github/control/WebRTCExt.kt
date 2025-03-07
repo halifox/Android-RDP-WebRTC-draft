@@ -35,35 +35,6 @@ fun send(ctx: ChannelHandlerContext, description: SessionDescription) {
     ctx.writeAndFlush(buffer)
 }
 
-fun send(ctx: ChannelHandlerContext, event: MotionEvent,w:Int,h:Int) {
-    val buffer = PooledByteBufAllocator.DEFAULT.buffer(9 * Int.SIZE_BYTES + Float.SIZE_BYTES)
-
-    buffer.writeInt(ControlService.TYPE_MOTION_EVENT)
-    buffer.writeInt(event.action)
-    buffer.writeInt(event.getPointerId(event.actionIndex))
-    buffer.writeInt(
-        event.getX(event.actionIndex)
-            .toInt()
-    )
-    buffer.writeInt(
-        event.getY(event.actionIndex)
-            .toInt()
-    )
-    buffer.writeInt(w)
-    buffer.writeInt(h)
-    buffer.writeFloat(event.pressure)
-    buffer.writeInt(event.actionButton)
-    buffer.writeInt(event.buttonState)
-
-    ctx.writeAndFlush(buffer)
-}
-
-fun send(ctx: ChannelHandlerContext, action: Int) {
-    val buffer = PooledByteBufAllocator.DEFAULT.buffer(2 * Int.SIZE_BYTES)
-    buffer.writeInt(ControlService.TYPE_GLOBAL_ACTION)
-    buffer.writeInt(action)
-    ctx.writeAndFlush(buffer)
-}
 
 fun readSessionDescription(byteBuf: ByteBuf): SessionDescription {
     return SessionDescription(

@@ -56,6 +56,13 @@ public class Controller {
         return false;
     }
 
+    public boolean injectGlobalAction(int action) {
+        if (controllerDelegate != null) {
+            return controllerDelegate.injectGlobalAction(action);
+        }
+        return false;
+    }
+
     public boolean injectTouch(int action, int pointerId, Position position, float pressure, int actionButton, int buttons) {
         long now = SystemClock.uptimeMillis();
 

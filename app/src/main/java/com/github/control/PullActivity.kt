@@ -4,7 +4,6 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.view.MotionEvent
 import androidx.appcompat.app.AppCompatActivity
 import com.github.control.databinding.ActivityPullBinding
 import io.netty.bootstrap.Bootstrap
@@ -19,11 +18,7 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import io.netty.handler.codec.LengthFieldPrepender
 import io.netty.handler.codec.bytes.ByteArrayDecoder
 import io.netty.handler.codec.bytes.ByteArrayEncoder
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.webrtc.DefaultVideoDecoderFactory
 import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.EglBase
@@ -67,33 +62,34 @@ class PullActivity : AppCompatActivity() {
         setContentView(binding.root)
         binding.SurfaceViewRenderer.init(eglBaseContext, null)
         binding.SurfaceViewRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT, RendererCommon.ScalingType.SCALE_ASPECT_FIT);
-        initService()
-        initService2()
+        initScreenCaptureService()
+        initControlService()
     }
 
-    private val eventChannel = Channel<MotionEvent>(Channel.BUFFERED)
-    private val actionChannel = Channel<Int>(Channel.BUFFERED)
+    private val flow = MutableStateFlow<Event>(EmptyEvent)
+//    private val eventChannel = Channel<MotionEvent>(Channel.BUFFERED)
+//    private val actionChannel = Channel<Int>(Channel.BUFFERED)
 
     override fun onStart() {
         super.onStart()
         binding.SurfaceViewRenderer.setOnTouchListener { _, event ->
-            eventChannel.trySend(event)
+            flow.tryEmit(TouchEvent(event, binding.SurfaceViewRenderer.width, binding.SurfaceViewRenderer.height))
             true
         }
 
         binding.back.setOnClickListener {
-            actionChannel.trySend(AccessibilityService.GLOBAL_ACTION_BACK)
+            flow.tryEmit(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_BACK))
         }
         binding.home.setOnClickListener {
-            actionChannel.trySend(AccessibilityService.GLOBAL_ACTION_HOME)
+            flow.tryEmit(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_HOME))
         }
         binding.recents.setOnClickListener {
-            actionChannel.trySend(AccessibilityService.GLOBAL_ACTION_RECENTS)
+            flow.tryEmit(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_RECENTS))
         }
     }
 
 
-    private fun initService() {
+    private fun initScreenCaptureService() {
         Bootstrap()
             .group(eventLoopGroup)
             .channel(NioSocketChannel::class.java)
@@ -165,9 +161,9 @@ class PullActivity : AppCompatActivity() {
             .apply {
                 addListener { future ->
                     if (future.isSuccess) {
-                        println("Server started on port 8888");
+                        println("connect ScreenCaptureService");
                     } else {
-                        println("Failed to start server");
+                        println("Failed to connect ScreenCaptureService");
                         future.cause()
                             .printStackTrace();
                     }
@@ -182,7 +178,7 @@ class PullActivity : AppCompatActivity() {
             }
     }
 
-    private fun initService2() {
+    private fun initControlService() {
         Bootstrap()
             .group(eventLoopGroup2)
             .channel(NioSocketChannel::class.java)
@@ -193,38 +189,39 @@ class PullActivity : AppCompatActivity() {
                         .addLast(LengthFieldPrepender(4))
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
-                        .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
-                            val coroutineScope = MainScope()
-                            override fun channelActive(ctx: ChannelHandlerContext) {
-                                coroutineScope.launch {
-                                    eventChannel.consumeEach { event ->
-                                        send(ctx, event, binding.SurfaceViewRenderer.width, binding.SurfaceViewRenderer.height)
-                                    }
-                                }
-                                coroutineScope.launch {
-                                    actionChannel.consumeEach { action ->
-                                        send(ctx, action)
-                                    }
-                                }
-
-                            }
-
-                            override fun channelInactive(ctx: ChannelHandlerContext?) {
-                                coroutineScope.cancel()
-                            }
-
-                            override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
-                            }
-                        })
+                        .addLast(ControlOutboundHandler(flow))
+//                        .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
+//                            val coroutineScope = MainScope()
+//                            override fun channelActive(ctx: ChannelHandlerContext) {
+//                                coroutineScope.launch {
+//                                    eventChannel.consumeEach { event ->
+//                                        ControlOutboundHandlerTmp.send(ctx, event, binding.SurfaceViewRenderer.width, binding.SurfaceViewRenderer.height)
+//                                    }
+//                                }
+//                                coroutineScope.launch {
+//                                    actionChannel.consumeEach { action ->
+//                                        ControlOutboundHandlerTmp.send(ctx, action)
+//                                    }
+//                                }
+//
+//                            }
+//
+//                            override fun channelInactive(ctx: ChannelHandlerContext?) {
+//                                coroutineScope.cancel()
+//                            }
+//
+//                            override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
+//                            }
+//                        })
                 }
             })
             .connect(inetHost, 40001)
             .apply {
                 addListener { future ->
                     if (future.isSuccess) {
-                        println("Server started on port 8888");
+                        println("connect ControlService");
                     } else {
-                        println("Failed to start server");
+                        println("Failed to connect ControlService");
                         future.cause()
                             .printStackTrace();
                     }

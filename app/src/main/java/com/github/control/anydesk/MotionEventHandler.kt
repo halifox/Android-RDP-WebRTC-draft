@@ -9,13 +9,18 @@ import com.github.control.scrcpy.ControllerDelegate
  * 处理触摸事件并将其转换为无障碍手势的事件处理类
  *
  * @property accessibilityService 关联的无障碍服务实例
- * @property trackers 手势跟踪器列表，最多支持 16 个手势点
  */
 class MotionEventHandler(
     private val accessibilityService: AccessibilityService,
-    private val trackers: List<GestureTracker> = List(16) { GestureTracker() },
 ) : ControllerDelegate {
     private var isGestureActive = false // 标识当前是否有手势在进行
+
+    //手势跟踪器列表，最多支持 16 个手势点
+    private val trackers: List<GestureTracker> = List(16) { GestureTracker() }
+
+    override fun injectGlobalAction(action: Int): Boolean {
+        return accessibilityService.performGlobalAction(action)
+    }
 
     override fun injectInputEvent(inputEvent: MotionEvent, displayId: Int, injectMode: Int): Boolean {
         handleEvent(inputEvent)

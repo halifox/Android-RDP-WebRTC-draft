@@ -161,29 +161,29 @@ class PullActivityTCP : AppCompatActivity() {
                         .addLast(LengthFieldPrepender(4))
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
-                        .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
-                            val coroutineScope = MainScope()
-                            override fun channelActive(ctx: ChannelHandlerContext) {
-                                coroutineScope.launch {
-                                    eventChannel.consumeEach { event ->
-                                        send(ctx, event, binding.SurfaceView.width, binding.SurfaceView.height)
-                                    }
-                                }
-                                coroutineScope.launch {
-                                    actionChannel.consumeEach { action ->
-                                        send(ctx, action)
-                                    }
-                                }
-
-                            }
-
-                            override fun channelInactive(ctx: ChannelHandlerContext?) {
-                                coroutineScope.cancel()
-                            }
-
-                            override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
-                            }
-                        })
+//                        .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
+//                            val coroutineScope = MainScope()
+//                            override fun channelActive(ctx: ChannelHandlerContext) {
+//                                coroutineScope.launch {
+//                                    eventChannel.consumeEach { event ->
+//                                        send(ctx, event, binding.SurfaceView.width, binding.SurfaceView.height)
+//                                    }
+//                                }
+//                                coroutineScope.launch {
+//                                    actionChannel.consumeEach { action ->
+//                                        send(ctx, action)
+//                                    }
+//                                }
+//
+//                            }
+//
+//                            override fun channelInactive(ctx: ChannelHandlerContext?) {
+//                                coroutineScope.cancel()
+//                            }
+//
+//                            override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
+//                            }
+//                        })
                 }
             })
             .connect(inetHost, 40001)

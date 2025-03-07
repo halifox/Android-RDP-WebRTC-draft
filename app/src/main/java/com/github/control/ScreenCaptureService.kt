@@ -1,15 +1,14 @@
 package com.github.control
 
-import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjection
-import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationChannelGroupCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.LifecycleService
 import com.blankj.utilcode.util.ScreenUtils
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.PooledByteBufAllocator
@@ -36,7 +35,7 @@ import org.webrtc.SurfaceTextureHelper
 import java.nio.charset.Charset
 
 
-class ScreenCaptureService : Service() {
+class ScreenCaptureService : LifecycleService() {
     private val context = this
 
     private val bossGroup = NioEventLoopGroup()
@@ -57,22 +56,22 @@ class ScreenCaptureService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d("TAG", "onCreate: ")
+        Log.d(TAG, "onCreate: ")
         startForeground()
         startServer()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d("TAG", "onDestroy: ")
-        workerGroup.shutdownGracefully()
-        bossGroup.shutdownGracefully()
+        Log.d(TAG, "onDestroy: ")
         eglBase.release()
+        stopServer()
+        stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("TAG", "onStartCommand: ")
+        Log.d(TAG, "onStartCommand: ")
         val screenCaptureIntent = intent?.getParcelableExtra<Intent?>(SCREEN_CAPTURE_INTENT)
         if (screenCaptureIntent != null) {
             ScreenCapturerAndroid(screenCaptureIntent, object : MediaProjection.Callback() {
@@ -156,7 +155,7 @@ class ScreenCaptureService : Service() {
             .apply {
                 addListener { future ->
                     if (future.isSuccess) {
-                        println("Server started on port 8888");
+                        println("Server started on port 40000");
                     } else {
                         println("Failed to start server");
                         future.cause()
@@ -172,6 +171,11 @@ class ScreenCaptureService : Service() {
                     workerGroup.shutdownGracefully()
                 }
             }
+    }
+
+    private fun stopServer() {
+        workerGroup.shutdownGracefully()
+        bossGroup.shutdownGracefully()
     }
 
 
@@ -199,12 +203,8 @@ class ScreenCaptureService : Service() {
         startForeground(1, notification)
     }
 
-
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
-
     companion object {
+        private const val TAG = "ScreenCaptureService"
         private const val SCREEN_CAPTURE_INTENT = "SCREEN_CAPTURE_INTENT"
 
         @JvmStatic
