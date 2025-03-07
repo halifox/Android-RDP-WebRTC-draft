@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">control</string>
     <string name="acc_service_description">When this service is turned on, it provides remote control capabilities for the app.</string>
+    <string name="title_activity_slave">SlaveActivity</string>
 </resources>
