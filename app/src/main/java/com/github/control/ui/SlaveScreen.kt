@@ -35,11 +35,14 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.blankj.utilcode.util.ServiceUtils
 import com.github.control.ControlService
 import com.github.control.ScreenCaptureService
+import org.koin.compose.koinInject
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SlaveScreen() {
+    val nsdManager = koinInject<NsdManager>()
+    val mediaProjectionManager = koinInject<MediaProjectionManager>()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
     var accessibilityEnabled by remember { mutableStateOf(isAccessibilityEnabled(context)) }
@@ -113,9 +116,7 @@ fun SlaveScreen() {
                     Text("屏幕录制权限", modifier = Modifier.weight(1f))
                     Button(
                         onClick = {
-                            val systemService = context.getSystemService(MediaProjectionManager::class.java)!!
-                            val screenCaptureIntent = systemService.createScreenCaptureIntent()
-                            screenCaptureLauncher.launch(screenCaptureIntent)
+                            screenCaptureLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
                         },
                         enabled = !screenCaptureServiceEnabled,
                     ) {
@@ -126,7 +127,6 @@ fun SlaveScreen() {
                 Button(
                     onClick = {
                         running = true
-                        val nsdManager = context.getSystemService(NsdManager::class.java)!!
                         val serviceInfo = NsdServiceInfo().apply {
                             serviceName = "control"
                             serviceType = "_control._tcp."
@@ -141,7 +141,6 @@ fun SlaveScreen() {
                 Button(
                     onClick = {
                         running = false
-                        val nsdManager = context.getSystemService(NsdManager::class.java)!!
                         nsdManager.unregisterService(registrationListener)
 
                         ScreenCaptureService.stop(context)

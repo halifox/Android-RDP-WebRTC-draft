@@ -1,24 +1,18 @@
 package com.github.control.scrcpy;
 
-import android.content.Context;
 import android.hardware.input.InputManager;
 import android.os.Build;
 import android.os.SystemClock;
-import android.util.DisplayMetrics;
 import android.view.InputDevice;
 import android.view.MotionEvent;
-import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 
-import com.blankj.utilcode.util.AppUtils;
-import com.blankj.utilcode.util.DeviceUtils;
 import com.blankj.utilcode.util.ScreenUtils;
 
 import java.lang.reflect.Method;
 
 public class Controller {
-    public static DisplayMetrics displayMetrics = new DisplayMetrics();
     private static Method setActionButtonMethod;
 
     private ControllerDelegate controllerDelegate;
@@ -185,11 +179,5 @@ public class Controller {
             // Cannot set action button on MotionEvent
             return false;
         }
-    }
-
-    @Deprecated
-    public static void updateDisplayMetrics(@NonNull Context context) {
-        WindowManager windowManager = context.getSystemService(WindowManager.class);
-        windowManager.getDefaultDisplay().getMetrics(displayMetrics);
     }
 }

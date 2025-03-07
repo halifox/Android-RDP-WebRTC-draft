@@ -23,15 +23,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.github.control.PullActivity
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MasterScreen() {
+    val nsdManager = koinInject<NsdManager>()
     val context = LocalContext.current
     var discovering by remember { mutableStateOf(false) }
     val serviceList = remember { mutableStateListOf<NsdServiceInfo>() }
     DisposableEffect(Unit) {
-        val nsdManager = context.getSystemService(NsdManager::class.java)!!
         val discoveryListener = object : NsdManager.DiscoveryListener {
             private val TAG = "NsdManager"
             override fun onDiscoveryStarted(serviceType: String) {
@@ -92,7 +93,6 @@ fun MasterScreen() {
                             PullActivity.start(context, serviceHost.hostName)
                             return@Button
                         }
-                        val nsdManager = context.getSystemService(NsdManager::class.java)!!
                         nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
                             override fun onResolveFailed(serviceInfo: NsdServiceInfo?, errorCode: Int) {
 

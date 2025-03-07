@@ -41,14 +41,12 @@ class ControlService : AccessibilityService() {
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            Controller.updateDisplayMetrics(context)
         }
     }
 
     override fun onCreate() {
         super.onCreate()
         registerReceiver(receiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED))
-        Controller.updateDisplayMetrics(context)
         controller.setInjectorDelegate(motionEventHandler)
         startServer()
     }

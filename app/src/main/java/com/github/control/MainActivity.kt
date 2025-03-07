@@ -5,7 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.github.control.scrcpy.Controller
-import com.github.control.ui.MainScreen
+import com.github.control.ui.App
 
 
 @SuppressLint("MissingInflatedId", "ClickableViewAccessibility")
@@ -13,9 +13,8 @@ class MainActivity : ComponentActivity() {
     private val context = this
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Controller.updateDisplayMetrics(context)
         setContent {
-            MainScreen()
+            App()
         }
     }
 }

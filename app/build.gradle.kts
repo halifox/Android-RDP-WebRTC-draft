@@ -79,6 +79,8 @@ dependencies {
     implementation("com.blankj:utilcodex:1.31.1")
 
     implementation("io.insert-koin:koin-android:4.1.0-Beta5")
+    implementation("io.insert-koin:koin-androidx-compose:4.1.0-Beta5")
+    implementation("io.insert-koin:koin-androidx-compose-navigation:4.1.0-Beta5")
 
 
 }
