@@ -2,29 +2,46 @@ package com.github.control.anydesk
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
+import android.view.KeyEvent
 import android.view.MotionEvent
-import com.github.control.scrcpy.ControllerDelegate
 
 /**
  * 处理触摸事件并将其转换为无障碍手势的事件处理类
  *
  * @property accessibilityService 关联的无障碍服务实例
  */
-class MotionEventHandler(
+class InputEventControllerDelegate(
     private val accessibilityService: AccessibilityService,
-) : ControllerDelegate {
+) : IControllerDelegate {
     private var isGestureActive = false // 标识当前是否有手势在进行
 
     //手势跟踪器列表，最多支持 16 个手势点
     private val trackers: List<GestureTracker> = List(16) { GestureTracker() }
 
-    override fun injectGlobalAction(action: Int): Boolean {
-        return accessibilityService.performGlobalAction(action)
-    }
-
     override fun injectInputEvent(inputEvent: MotionEvent, displayId: Int, injectMode: Int): Boolean {
         handleEvent(inputEvent)
         return true
+    }
+
+    override fun injectKeyEvent(keyEvent: KeyEvent) {
+        val action = keyEvent.action
+        val keyCode = keyEvent.keyCode
+        val isShiftPressed = keyEvent.isShiftPressed
+        val isCtrlPressed = keyEvent.isCtrlPressed
+        when (keyCode) {
+            KeyEvent.KEYCODE_HOME -> accessibilityService.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+            KeyEvent.KEYCODE_BACK -> accessibilityService.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+            KeyEvent.KEYCODE_VOLUME_UP -> {}
+            KeyEvent.KEYCODE_VOLUME_DOWN -> {}
+            KeyEvent.KEYCODE_POWER -> {}
+            KeyEvent.KEYCODE_SPACE -> {}
+            KeyEvent.KEYCODE_MENU -> {}
+            KeyEvent.KEYCODE_APP_SWITCH -> accessibilityService.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS)
+        }
+    }
+
+    override fun injectGlobalAction(action: Int): Boolean {
+        return accessibilityService.performGlobalAction(action)
     }
 
     /**

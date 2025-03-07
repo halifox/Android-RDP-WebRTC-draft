@@ -11,6 +11,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.github.control.scrcpy.Controller
 import com.github.control.ui.theme.ControlTheme
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -29,6 +30,7 @@ fun App() {
         modules(module {
             single { ContextCompat.getSystemService(get(), NsdManager::class.java) }
             single { ContextCompat.getSystemService(get(), MediaProjectionManager::class.java) }
+            single { Controller() }
         })
     }) {
         ControlTheme {

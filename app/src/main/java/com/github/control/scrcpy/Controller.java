@@ -9,13 +9,14 @@ import android.view.MotionEvent;
 import androidx.annotation.NonNull;
 
 import com.blankj.utilcode.util.ScreenUtils;
+import com.github.control.anydesk.IControllerDelegate;
 
 import java.lang.reflect.Method;
 
 public class Controller {
     private static Method setActionButtonMethod;
 
-    private ControllerDelegate controllerDelegate;
+    private com.github.control.anydesk.IControllerDelegate IControllerDelegate;
     private long lastTouchDown;
 
     private final PointersState pointersState = new PointersState();
@@ -45,20 +46,20 @@ public class Controller {
         }
     }
 
-    public void setInjectorDelegate(ControllerDelegate controllerDelegate) {
-        this.controllerDelegate = controllerDelegate;
+    public void setControllerDelegate(IControllerDelegate IControllerDelegate) {
+        this.IControllerDelegate = IControllerDelegate;
     }
 
     public boolean injectInputEvent(MotionEvent inputEvent, int displayId, int injectMode) {
-        if (controllerDelegate != null) {
-            return controllerDelegate.injectInputEvent(inputEvent, displayId, injectMode);
+        if (IControllerDelegate != null) {
+            return IControllerDelegate.injectInputEvent(inputEvent, displayId, injectMode);
         }
         return false;
     }
 
     public boolean injectGlobalAction(int action) {
-        if (controllerDelegate != null) {
-            return controllerDelegate.injectGlobalAction(action);
+        if (IControllerDelegate != null) {
+            return IControllerDelegate.injectGlobalAction(action);
         }
         return false;
     }

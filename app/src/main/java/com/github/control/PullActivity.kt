@@ -63,7 +63,7 @@ class PullActivity : AppCompatActivity() {
         binding.SurfaceViewRenderer.init(eglBaseContext, null)
         binding.SurfaceViewRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT, RendererCommon.ScalingType.SCALE_ASPECT_FIT);
         initScreenCaptureService()
-        initControlService()
+//        initControlService()
     }
 
     private val flow = MutableStateFlow<Event>(EmptyEvent)
@@ -100,6 +100,7 @@ class PullActivity : AppCompatActivity() {
                         .addLast(LengthFieldPrepender(4))
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
+                        .addLast(ControlOutboundHandler(flow))
                         .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
                             private var peerConnection: PeerConnection? = null
 
@@ -177,65 +178,6 @@ class PullActivity : AppCompatActivity() {
                 }
             }
     }
-
-    private fun initControlService() {
-        Bootstrap()
-            .group(eventLoopGroup2)
-            .channel(NioSocketChannel::class.java)
-            .handler(object : ChannelInitializer<SocketChannel>() {
-                override fun initChannel(channel: SocketChannel) {
-                    channel.pipeline()
-                        .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
-                        .addLast(LengthFieldPrepender(4))
-                        .addLast(ByteArrayDecoder())
-                        .addLast(ByteArrayEncoder())
-                        .addLast(ControlOutboundHandler(flow))
-//                        .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
-//                            val coroutineScope = MainScope()
-//                            override fun channelActive(ctx: ChannelHandlerContext) {
-//                                coroutineScope.launch {
-//                                    eventChannel.consumeEach { event ->
-//                                        ControlOutboundHandlerTmp.send(ctx, event, binding.SurfaceViewRenderer.width, binding.SurfaceViewRenderer.height)
-//                                    }
-//                                }
-//                                coroutineScope.launch {
-//                                    actionChannel.consumeEach { action ->
-//                                        ControlOutboundHandlerTmp.send(ctx, action)
-//                                    }
-//                                }
-//
-//                            }
-//
-//                            override fun channelInactive(ctx: ChannelHandlerContext?) {
-//                                coroutineScope.cancel()
-//                            }
-//
-//                            override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
-//                            }
-//                        })
-                }
-            })
-            .connect(inetHost, 40001)
-            .apply {
-                addListener { future ->
-                    if (future.isSuccess) {
-                        println("connect ControlService");
-                    } else {
-                        println("Failed to connect ControlService");
-                        future.cause()
-                            .printStackTrace();
-                    }
-                }
-            }
-            .channel()//
-            .closeFuture()
-            .apply {
-                addListener {
-                    eventLoopGroup2.shutdownGracefully()
-                }
-            }
-    }
-
 
     override fun onDestroy() {
         super.onDestroy()

@@ -60,7 +60,6 @@ class PullActivityTCP : AppCompatActivity() {
         })
 
         initService()
-        initService2()
     }
 
     private val eventChannel = Channel<MotionEvent>(Channel.BUFFERED)
@@ -150,62 +149,6 @@ class PullActivityTCP : AppCompatActivity() {
             }
     }
 
-    private fun initService2() {
-        Bootstrap()
-            .group(eventLoopGroup2)
-            .channel(NioSocketChannel::class.java)
-            .handler(object : ChannelInitializer<SocketChannel>() {
-                override fun initChannel(channel: SocketChannel) {
-                    channel.pipeline()
-                        .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
-                        .addLast(LengthFieldPrepender(4))
-                        .addLast(ByteArrayDecoder())
-                        .addLast(ByteArrayEncoder())
-//                        .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
-//                            val coroutineScope = MainScope()
-//                            override fun channelActive(ctx: ChannelHandlerContext) {
-//                                coroutineScope.launch {
-//                                    eventChannel.consumeEach { event ->
-//                                        send(ctx, event, binding.SurfaceView.width, binding.SurfaceView.height)
-//                                    }
-//                                }
-//                                coroutineScope.launch {
-//                                    actionChannel.consumeEach { action ->
-//                                        send(ctx, action)
-//                                    }
-//                                }
-//
-//                            }
-//
-//                            override fun channelInactive(ctx: ChannelHandlerContext?) {
-//                                coroutineScope.cancel()
-//                            }
-//
-//                            override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
-//                            }
-//                        })
-                }
-            })
-            .connect(inetHost, 40001)
-            .apply {
-                addListener { future ->
-                    if (future.isSuccess) {
-                        println("Server started on port 8888");
-                    } else {
-                        println("Failed to start server");
-                        future.cause()
-                            .printStackTrace();
-                    }
-                }
-            }
-            .channel()//
-            .closeFuture()
-            .apply {
-                addListener {
-                    eventLoopGroup2.shutdownGracefully()
-                }
-            }
-    }
 
 
     override fun onDestroy() {
