@@ -72,6 +72,8 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
+    implementation("androidx.navigation:navigation-compose:2.8.8")
+
     implementation("io.netty:netty-all:4.1.17.Final")
     implementation("io.getstream:stream-webrtc-android:1.3.7")
     implementation("com.blankj:utilcodex:1.31.1")

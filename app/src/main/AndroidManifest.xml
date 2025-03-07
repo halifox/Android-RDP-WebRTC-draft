@@ -30,11 +30,6 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
-            android:name=".SlaveActivity"
-            android:exported="false"
-            android:label="@string/title_activity_slave"
-            android:theme="@style/Theme.Control" />
-        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
