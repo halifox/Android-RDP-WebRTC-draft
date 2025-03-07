@@ -1,8 +1,9 @@
 package com.github.control
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.MotionEvent
 import androidx.appcompat.app.AppCompatActivity
 import com.github.control.databinding.ActivityPullBinding
@@ -65,7 +66,7 @@ class PullActivity : AppCompatActivity() {
         binding = ActivityPullBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.SurfaceViewRenderer.init(eglBaseContext, null)
-        binding.SurfaceViewRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT,RendererCommon.ScalingType.SCALE_ASPECT_FIT);
+        binding.SurfaceViewRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT, RendererCommon.ScalingType.SCALE_ASPECT_FIT);
         initService()
         initService2()
     }
@@ -197,7 +198,7 @@ class PullActivity : AppCompatActivity() {
                             override fun channelActive(ctx: ChannelHandlerContext) {
                                 coroutineScope.launch {
                                     eventChannel.consumeEach { event ->
-                                        send(ctx, event,binding.SurfaceViewRenderer.width,binding.SurfaceViewRenderer.height)
+                                        send(ctx, event, binding.SurfaceViewRenderer.width, binding.SurfaceViewRenderer.height)
                                     }
                                 }
                                 coroutineScope.launch {
@@ -246,5 +247,14 @@ class PullActivity : AppCompatActivity() {
         eventLoopGroup.shutdownGracefully()
         eventLoopGroup2.shutdownGracefully()
         eglBase.release()
+    }
+
+    companion object {
+        @JvmStatic
+        fun start(context: Context, host: String) {
+            val starter = Intent(context, PullActivity::class.java)
+                .putExtra("host", host)
+            context.startActivity(starter)
+        }
     }
 }

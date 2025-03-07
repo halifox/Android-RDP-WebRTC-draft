@@ -3,9 +3,11 @@ package com.github.control.ui
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.util.Log
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -17,8 +19,10 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.github.control.PullActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +82,34 @@ fun MasterScreen() {
         ) {
             items(serviceList.size) {
                 val serviceInfo = serviceList[it]
-                Text(text = "${serviceInfo.toString()}")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(text = serviceInfo.toString(), modifier = Modifier.weight(1f))
+                    Button(onClick = {
+                        val serviceHost = serviceInfo.host
+                        if (serviceHost != null) {
+                            PullActivity.start(context, serviceHost.hostName)
+                            return@Button
+                        }
+                        val nsdManager = context.getSystemService(NsdManager::class.java)!!
+                        nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
+                            override fun onResolveFailed(serviceInfo: NsdServiceInfo?, errorCode: Int) {
+
+                            }
+
+                            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+                                serviceList[it] = serviceInfo
+                                val serviceHost = serviceInfo.host
+                                if (serviceHost != null) {
+                                    PullActivity.start(context, serviceHost.hostName)
+                                }
+                            }
+                        })
+                    }) {
+                        Text(text = "连接")
+                    }
+                }
             }
         }
     }

@@ -44,6 +44,7 @@ fun SlaveScreen() {
     val context = LocalContext.current
     var accessibilityEnabled by remember { mutableStateOf(isAccessibilityEnabled(context)) }
     var screenCaptureServiceEnabled by remember { mutableStateOf(isServiceRunning(context)) }
+    var running by remember { mutableStateOf(false) }
     val screenCaptureLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) {
         if (it.resultCode == AppCompatActivity.RESULT_OK && it.data != null) {
             ScreenCaptureService.start(context, it.data)
@@ -124,28 +125,28 @@ fun SlaveScreen() {
 
                 Button(
                     onClick = {
+                        running = true
                         val nsdManager = context.getSystemService(NsdManager::class.java)!!
                         val serviceInfo = NsdServiceInfo().apply {
-                            serviceName = "control" // 设置服务名称
-                            serviceType = "_control._tcp." // 设置服务类型
-                            port = 35485 // 设置端口号
+                            serviceName = "control"
+                            serviceType = "_control._tcp."
+                            port = 40000
                         }
                         nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
                     },
-//                    enabled = screenCaptureServiceEnabled && accessibilityEnabled
-                    enabled = true
+                    enabled = screenCaptureServiceEnabled && accessibilityEnabled && !running
                 ) {
                     Text(text = "开始")
                 }
                 Button(
                     onClick = {
+                        running = false
                         val nsdManager = context.getSystemService(NsdManager::class.java)!!
                         nsdManager.unregisterService(registrationListener)
 
                         ScreenCaptureService.stop(context)
                     },
-//                    enabled = screenCaptureServiceEnabled && accessibilityEnabled
-                    enabled = true
+                    enabled = screenCaptureServiceEnabled && accessibilityEnabled && running
                 ) {
                     Text(text = "停止")
                 }
