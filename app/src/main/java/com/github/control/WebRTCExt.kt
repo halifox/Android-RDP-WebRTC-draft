@@ -1,7 +1,5 @@
 package com.github.control
 
-import android.view.MotionEvent
-import com.github.control.scrcpy.Controller
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.PooledByteBufAllocator
 import io.netty.channel.ChannelHandlerContext
@@ -14,7 +12,7 @@ import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import java.nio.charset.Charset
 
-fun send(ctx: ChannelHandlerContext, iceCandidate: IceCandidate) {
+fun sendIceCandidate(ctx: ChannelHandlerContext, iceCandidate: IceCandidate) {
     val buffer = PooledByteBufAllocator.DEFAULT.buffer(4 * Int.SIZE_BYTES + iceCandidate.sdpMid.length + iceCandidate.sdp.length)
     buffer.writeInt(1)
     buffer.writeInt(iceCandidate.sdpMid.length)
@@ -25,7 +23,7 @@ fun send(ctx: ChannelHandlerContext, iceCandidate: IceCandidate) {
     ctx.writeAndFlush(buffer)
 }
 
-fun send(ctx: ChannelHandlerContext, description: SessionDescription) {
+fun sendSessionDescription(ctx: ChannelHandlerContext, description: SessionDescription) {
     val buffer = PooledByteBufAllocator.DEFAULT.buffer(3 * Int.SIZE_BYTES + description.type.name.length + description.description.length)
     buffer.writeInt(2)
     buffer.writeInt(description.type.name.length)

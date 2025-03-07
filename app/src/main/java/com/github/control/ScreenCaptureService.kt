@@ -103,14 +103,14 @@ class ScreenCaptureService : LifecycleService() {
                         .addLast(LengthFieldPrepender(4))
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
-                        .addLast(ControlInboundHandler(controller))
+                        .addLast(ControlInboundHandler(controller = controller))
                         .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
                             private var peerConnection: PeerConnection? = null
                             override fun channelActive(ctx: ChannelHandlerContext) {
                                 super.channelActive(ctx)
                                 peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : EmptyPeerConnectionObserver() {
                                     override fun onIceCandidate(iceCandidate: IceCandidate) {
-                                        send(ctx, iceCandidate)
+                                        sendIceCandidate(ctx, iceCandidate)
                                     }
                                 })
                                     ?.apply {
@@ -118,7 +118,7 @@ class ScreenCaptureService : LifecycleService() {
                                         createOffer(object : EmptySdpObserver() {
                                             override fun onCreateSuccess(description: SessionDescription) {
                                                 peerConnection?.setLocalDescription(EmptySdpObserver(), description)
-                                                send(ctx, description)
+                                                sendSessionDescription(ctx, description)
                                             }
                                         }, MediaConstraints())
                                     }

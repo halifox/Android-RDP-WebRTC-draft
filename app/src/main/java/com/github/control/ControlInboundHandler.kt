@@ -22,13 +22,27 @@ private const val TYPE_GLOBAL_ACTION = 101
 private const val TYPE_MOTION_EVENT = 102
 
 sealed class Event
-data object EmptyEvent : Event()
-class TouchEvent(val event: MotionEvent, val w: Int, val h: Int) : Event()
+class TouchEvent(val event: MotionEvent, val screenWidth: Int, val screenHeight: Int) : Event()
 class GlobalActionEvent(val action: Int) : Event()
 
 class ControlInboundHandler(
-    private val controller: Controller,
+    private val controller: Controller? = null,
+    private val eventChannel: Channel<Event>? = null
+
 ) : SimpleChannelInboundHandler<ByteArray>() {
+    private val scope = CoroutineScope(Job())
+    override fun channelActive(ctx: ChannelHandlerContext) {
+        super.channelActive(ctx)
+        if (eventChannel != null) {
+            listenEventChannel(ctx, eventChannel)
+        }
+    }
+
+    override fun channelInactive(ctx: ChannelHandlerContext) {
+        super.channelInactive(ctx)
+        scope.cancel()
+    }
+
     override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
         ctx.fireChannelRead(ReferenceCountUtil.retain(msg))
         val byteBuf = PooledByteBufAllocator.DEFAULT.buffer(msg.size)
@@ -46,74 +60,59 @@ class ControlInboundHandler(
                 val actionButton = byteBuf.readInt()
                 val buttons = byteBuf.readInt()
                 val position = Position(x, y, screenWidth, screenHeight)
-                controller.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
+                controller?.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
             }
 
             TYPE_GLOBAL_ACTION -> {
                 val action = byteBuf.readInt()
-                controller.injectGlobalAction(action)
-            }
-
-            else -> {
+                controller?.injectGlobalAction(action)
             }
         }
     }
-}
 
-
-class ControlOutboundHandler(
-    private val flow: Channel<Event>
-) : SimpleChannelInboundHandler<ByteArray>() {
-    private val scope = CoroutineScope(Job())
-    override fun channelActive(ctx: ChannelHandlerContext) {
-        super.channelActive(ctx)
-        flow
+    private fun listenEventChannel(ctx: ChannelHandlerContext, eventChannel: Channel<Event>) {
+        eventChannel
             .consumeAsFlow()
             .onEach {
                 Log.d("TAG", "flow: ${it}")
                 when (it) {
-                    is GlobalActionEvent -> send(ctx, it.action)
-                    is TouchEvent -> send(ctx, it.event, it.w, it.h)
-                    EmptyEvent -> {}
+                    is GlobalActionEvent -> sendGlobalActionEvent(ctx, it.action)
+                    is TouchEvent -> sendTouchEvent(ctx, it.event, it.screenWidth, it.screenHeight)
                 }
             }
             .flowOn(Dispatchers.IO)
             .launchIn(scope)
     }
 
-    override fun channelInactive(ctx: ChannelHandlerContext) {
-        super.channelInactive(ctx)
-        scope.cancel()
-    }
 
-    override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
-        ctx.fireChannelRead(ReferenceCountUtil.retain(msg))
-    }
-
-    private fun send(ctx: ChannelHandlerContext, event: MotionEvent, screenWidth: Int, screenHeight: Int) {
+    private fun sendTouchEvent(ctx: ChannelHandlerContext, event: MotionEvent, screenWidth: Int, screenHeight: Int) {
         val buffer = PooledByteBufAllocator.DEFAULT.buffer(9 * Int.SIZE_BYTES + Float.SIZE_BYTES)
+        val action = event.action
+        val pointerId = event.getPointerId(event.actionIndex)
+        val x = event.getX(event.actionIndex)
+            .toInt()
+        val y = event.getY(event.actionIndex)
+            .toInt()
+        val screenWidth = screenWidth
+        val screenHeight = screenHeight
+        val pressure = event.pressure
+        val actionButton = event.actionButton
+        val buttons = event.buttonState
 
         buffer.writeInt(TYPE_MOTION_EVENT)
-        buffer.writeInt(event.action)
-        buffer.writeInt(event.getPointerId(event.actionIndex))
-        buffer.writeInt(
-            event.getX(event.actionIndex)
-                .toInt()
-        )
-        buffer.writeInt(
-            event.getY(event.actionIndex)
-                .toInt()
-        )
+        buffer.writeInt(action)
+        buffer.writeInt(pointerId)
+        buffer.writeInt(x)
+        buffer.writeInt(y)
         buffer.writeInt(screenWidth)
         buffer.writeInt(screenHeight)
-        buffer.writeFloat(event.pressure)
-        buffer.writeInt(event.actionButton)
-        buffer.writeInt(event.buttonState)
-
+        buffer.writeFloat(pressure)
+        buffer.writeInt(actionButton)
+        buffer.writeInt(buttons)
         ctx.writeAndFlush(buffer)
     }
 
-    private fun send(ctx: ChannelHandlerContext, action: Int) {
+    private fun sendGlobalActionEvent(ctx: ChannelHandlerContext, action: Int) {
         val buffer = PooledByteBufAllocator.DEFAULT.buffer(2 * Int.SIZE_BYTES)
         buffer.writeInt(TYPE_GLOBAL_ACTION)
         buffer.writeInt(action)

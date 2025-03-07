@@ -98,7 +98,7 @@ class PullActivity : AppCompatActivity() {
                         .addLast(LengthFieldPrepender(4))
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
-                        .addLast(ControlOutboundHandler(eventChannel))
+                        .addLast(ControlInboundHandler(eventChannel = eventChannel))
                         .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
                             private var peerConnection: PeerConnection? = null
 
@@ -116,7 +116,7 @@ class PullActivity : AppCompatActivity() {
                                     }
 
                                     override fun onIceCandidate(iceCandidate: IceCandidate) {
-                                        send(ctx, iceCandidate)
+                                        sendIceCandidate(ctx, iceCandidate)
                                     }
                                 })
                             }
@@ -148,7 +148,7 @@ class PullActivity : AppCompatActivity() {
                                         peerConnection?.createAnswer(object : EmptySdpObserver() {
                                             override fun onCreateSuccess(description: SessionDescription) {
                                                 peerConnection?.setLocalDescription(EmptySdpObserver(), description)
-                                                send(ctx, description)
+                                                sendSessionDescription(ctx, description)
                                             }
                                         }, MediaConstraints())
                                     }
