@@ -1,6 +1,5 @@
 package com.github.control.ui
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
@@ -36,11 +35,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.blankj.utilcode.util.ServiceUtils
 import com.github.control.ControlService
 import com.github.control.ScreenCaptureService
-import com.github.control.ui.theme.ControlTheme
 
 
 @OptIn(ExperimentalMaterial3Api::class)
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun SlaveScreen() {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -80,81 +77,81 @@ fun SlaveScreen() {
         }
     }
 
-    ControlTheme {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = {
-                TopAppBar(title = {
-                    Text(text = "受控端")
-                })
-            },
-            content = { innerPadding ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(title = {
+                Text(text = "受控端")
+            })
+        },
+        content = { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("无障碍权限", modifier = Modifier.weight(1f))
-                        Button(
-                            onClick = {
-                                openAccessibilitySettings(context)
-                            },
-                            enabled = !accessibilityEnabled,
-                        ) {
-                            Text(text = "授权")
-                        }
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("屏幕录制权限", modifier = Modifier.weight(1f))
-                        Button(
-                            onClick = {
-                                val systemService = context.getSystemService(MediaProjectionManager::class.java)!!
-                                val screenCaptureIntent = systemService.createScreenCaptureIntent()
-                                screenCaptureLauncher.launch(screenCaptureIntent)
-                            },
-                            enabled = !screenCaptureServiceEnabled,
-                        ) {
-                            Text(text = "授权")
-                        }
-                    }
-
+                    Text("无障碍权限", modifier = Modifier.weight(1f))
                     Button(
                         onClick = {
-                            val nsdManager = context.getSystemService(NsdManager::class.java)!!
-                            val serviceInfo = NsdServiceInfo().apply {
-                                serviceName = "control" // 设置服务名称
-                                serviceType = "_control._tcp" // 设置服务类型
-                                port = 40000 // 设置端口号
-                            }
-                            nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
+                            openAccessibilitySettings(context)
                         },
-                        enabled = screenCaptureServiceEnabled && accessibilityEnabled
+                        enabled = !accessibilityEnabled,
                     ) {
-                        Text(text = "开始")
-                    }
-                    Button(
-                        onClick = {
-                            val nsdManager = context.getSystemService(NsdManager::class.java)!!
-                            nsdManager.unregisterService(registrationListener)
-
-                            ScreenCaptureService.stop(context)
-                        },
-                        enabled = screenCaptureServiceEnabled && accessibilityEnabled
-                    ) {
-                        Text(text = "停止")
+                        Text(text = "授权")
                     }
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("屏幕录制权限", modifier = Modifier.weight(1f))
+                    Button(
+                        onClick = {
+                            val systemService = context.getSystemService(MediaProjectionManager::class.java)!!
+                            val screenCaptureIntent = systemService.createScreenCaptureIntent()
+                            screenCaptureLauncher.launch(screenCaptureIntent)
+                        },
+                        enabled = !screenCaptureServiceEnabled,
+                    ) {
+                        Text(text = "授权")
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        val nsdManager = context.getSystemService(NsdManager::class.java)!!
+                        val serviceInfo = NsdServiceInfo().apply {
+                            serviceName = "control" // 设置服务名称
+                            serviceType = "_control._tcp." // 设置服务类型
+                            port = 35485 // 设置端口号
+                        }
+                        nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
+                    },
+//                    enabled = screenCaptureServiceEnabled && accessibilityEnabled
+                    enabled = true
+                ) {
+                    Text(text = "开始")
+                }
+                Button(
+                    onClick = {
+                        val nsdManager = context.getSystemService(NsdManager::class.java)!!
+                        nsdManager.unregisterService(registrationListener)
+
+                        ScreenCaptureService.stop(context)
+                    },
+//                    enabled = screenCaptureServiceEnabled && accessibilityEnabled
+                    enabled = true
+                ) {
+                    Text(text = "停止")
+                }
             }
-        )
-    }
+        }
+    )
 }
 
 private fun isServiceRunning(context: Context): Boolean {

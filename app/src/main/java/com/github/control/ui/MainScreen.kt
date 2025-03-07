@@ -1,7 +1,5 @@
 package com.github.control.ui
 
-import android.annotation.SuppressLint
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -14,8 +12,6 @@ import com.github.control.ui.theme.ControlTheme
 
 val LocalNavController = compositionLocalOf<NavHostController> { error("No NavController provided.") }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun MainScreen() {
     ControlTheme {
@@ -27,6 +23,9 @@ fun MainScreen() {
             ) {
                 composable("/HomeScreen") {
                     HomeScreen()
+                }
+                composable("/MasterScreen") {
+                    MasterScreen()
                 }
                 composable("/SlaveScreen") {
                     SlaveScreen()
