@@ -3,6 +3,8 @@ package com.github.control
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjection
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
 import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationChannelGroupCompat
@@ -49,12 +51,43 @@ class ScreenCaptureService : LifecycleService() {
     private val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
     private val rtcConfig = PeerConnection.RTCConfiguration(emptyList())
 
+
+    private val nsdManager by inject<NsdManager>()
+
+    private val registrationListener = object : NsdManager.RegistrationListener {
+        private val TAG = "NsdManager"
+        override fun onServiceRegistered(nsdServiceInfo: NsdServiceInfo) {
+            Log.d(TAG, "onServiceRegistered:注册成功 ")
+        }
+
+        override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+            Log.d(TAG, "onRegistrationFailed:注册失败 ")
+        }
+
+        override fun onServiceUnregistered(arg0: NsdServiceInfo) {
+            Log.d(TAG, "onServiceUnregistered:取消注册 ")
+        }
+
+        override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+            Log.d(TAG, "onUnregistrationFailed:取消注册失败 ")
+        }
+    }
+
+
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate: ")
         startForeground()
         startServer()
+
+        val serviceInfo = NsdServiceInfo().apply {
+            serviceName = "control"
+            serviceType = "_control._tcp."
+            port = 40000
+        }
+        nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -62,15 +95,21 @@ class ScreenCaptureService : LifecycleService() {
 
         stopServer()
         stopForeground(STOP_FOREGROUND_REMOVE)
+
+        nsdManager.unregisterService(registrationListener)
+        screenCapturerAndroid?.stopCapture()
+        screenCapturerAndroid?.dispose()
     }
 
+    private var screenCapturerAndroid: ScreenCapturerAndroid? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand: ")
         val screenCaptureIntent = intent?.getParcelableExtra<Intent?>(SCREEN_CAPTURE_INTENT)
         if (screenCaptureIntent != null) {
-            ScreenCapturerAndroid(screenCaptureIntent, object : MediaProjection.Callback() {
+            screenCapturerAndroid = ScreenCapturerAndroid(screenCaptureIntent, object : MediaProjection.Callback() {
                 override fun onStop() {
+                    Log.d(TAG, "onStop: ")
                     stopSelf()
                 }
             }).apply {

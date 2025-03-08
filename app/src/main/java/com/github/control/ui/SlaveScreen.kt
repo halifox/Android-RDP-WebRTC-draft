@@ -3,10 +3,7 @@ package com.github.control.ui
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
-import android.net.nsd.NsdManager
-import android.net.nsd.NsdServiceInfo
 import android.provider.Settings
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -41,43 +38,26 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SlaveScreen() {
-    val nsdManager = koinInject<NsdManager>()
     val mediaProjectionManager = koinInject<MediaProjectionManager>()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
     var accessibilityEnabled by remember { mutableStateOf(isAccessibilityEnabled(context)) }
     var screenCaptureServiceEnabled by remember { mutableStateOf(isServiceRunning(context)) }
-    var running by remember { mutableStateOf(false) }
+    fun checkState() {
+        accessibilityEnabled = isAccessibilityEnabled(context)
+        screenCaptureServiceEnabled = isServiceRunning(context)
+    }
+
+
     val screenCaptureLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) {
         if (it.resultCode == AppCompatActivity.RESULT_OK && it.data != null) {
             ScreenCaptureService.start(context, it.data)
+            checkState()
         }
     }
-    val registrationListener = remember {
-        object : NsdManager.RegistrationListener {
-            private val TAG = "NsdManager"
-            override fun onServiceRegistered(nsdServiceInfo: NsdServiceInfo) {
-                Log.d(TAG, "onServiceRegistered:注册成功 ")
-            }
-
-            override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                Log.d(TAG, "onRegistrationFailed:注册失败 ")
-            }
-
-            override fun onServiceUnregistered(arg0: NsdServiceInfo) {
-                Log.d(TAG, "onServiceUnregistered:取消注册 ")
-            }
-
-            override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                Log.d(TAG, "onUnregistrationFailed:取消注册失败 ")
-            }
-        }
-    }
-
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            accessibilityEnabled = isAccessibilityEnabled(context)
-            screenCaptureServiceEnabled = isServiceRunning(context)
+            checkState()
         }
     }
 
@@ -109,45 +89,22 @@ fun SlaveScreen() {
                         Text(text = "授权")
                     }
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("屏幕录制权限", modifier = Modifier.weight(1f))
-                    Button(
-                        onClick = {
-                            screenCaptureLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
-                        },
-                        enabled = !screenCaptureServiceEnabled,
-                    ) {
-                        Text(text = "授权")
-                    }
-                }
-
                 Button(
                     onClick = {
-                        running = true
-                        val serviceInfo = NsdServiceInfo().apply {
-                            serviceName = "control"
-                            serviceType = "_control._tcp."
-                            port = 40000
-                        }
-                        nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
+                        screenCaptureLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
                     },
-                    enabled = screenCaptureServiceEnabled && accessibilityEnabled && !running
+                    enabled = !screenCaptureServiceEnabled && accessibilityEnabled
                 ) {
-                    Text(text = "开始")
+                    Text(text = "开启服务")
                 }
                 Button(
                     onClick = {
-                        running = false
-                        nsdManager.unregisterService(registrationListener)
-
                         ScreenCaptureService.stop(context)
+                        checkState()
                     },
-                    enabled = screenCaptureServiceEnabled && accessibilityEnabled && running
+                    enabled = screenCaptureServiceEnabled
                 ) {
-                    Text(text = "停止")
+                    Text(text = "停止服务")
                 }
             }
         }
