@@ -9,8 +9,7 @@
         android:id="@+id/SurfaceViewRenderer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-
-       />
+        android:layout_gravity="center" />
 
     <LinearLayout
         android:id="@+id/control_penal"
