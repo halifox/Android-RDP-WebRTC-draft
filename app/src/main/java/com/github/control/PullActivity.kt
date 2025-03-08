@@ -19,6 +19,8 @@ import kotlinx.coroutines.channels.Channel
 import org.webrtc.DefaultVideoDecoderFactory
 import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.EglBase
+import org.webrtc.HardwareVideoDecoderFactory
+import org.webrtc.HardwareVideoEncoderFactory
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.RendererCommon
@@ -38,8 +40,8 @@ class PullActivity : AppCompatActivity() {
     private val eglBaseContext = eglBase.getEglBaseContext()
     private val peerConnectionFactory = PeerConnectionFactory.builder()
         .setOptions(PeerConnectionFactory.Options())
-        .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglBaseContext, true, true))
-        .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBaseContext))
+        .setVideoEncoderFactory(HardwareVideoEncoderFactory(eglBaseContext, true, true))
+        .setVideoDecoderFactory(HardwareVideoDecoderFactory(eglBaseContext))
         .createPeerConnectionFactory()
     private val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext, true)
     private val videoSource = peerConnectionFactory.createVideoSource(true, true)

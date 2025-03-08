@@ -21,9 +21,9 @@ import io.netty.handler.codec.LengthFieldPrepender
 import io.netty.handler.codec.bytes.ByteArrayDecoder
 import io.netty.handler.codec.bytes.ByteArrayEncoder
 import org.koin.android.ext.android.inject
-import org.webrtc.DefaultVideoDecoderFactory
-import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.EglBase
+import org.webrtc.HardwareVideoDecoderFactory
+import org.webrtc.HardwareVideoEncoderFactory
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.ScreenCapturerAndroid
@@ -41,8 +41,8 @@ class ScreenCaptureService : LifecycleService() {
     private val eglBase = EglBase.create()
     private val eglBaseContext = eglBase.getEglBaseContext()
     private val peerConnectionFactory = PeerConnectionFactory.builder()
-        .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglBaseContext, true, true))
-        .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBaseContext))
+        .setVideoEncoderFactory(HardwareVideoEncoderFactory(eglBaseContext, true, true))
+        .setVideoDecoderFactory(HardwareVideoDecoderFactory(eglBaseContext))
         .createPeerConnectionFactory()
     private val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext, true)
     private val videoSource = peerConnectionFactory.createVideoSource(true, true)
