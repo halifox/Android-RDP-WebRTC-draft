@@ -89,7 +89,7 @@ class PullActivity : AppCompatActivity() {
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
                         .addLast(ControlInboundHandler(eventChannel = eventChannel))
-                        .addLast(PeerConnectionInboundHandler(peerConnectionFactory, null, binding.SurfaceViewRenderer))
+                        .addLast(PeerConnectionInboundHandler(peerConnectionFactory, videoSink= binding.SurfaceViewRenderer))
 
                 }
             })

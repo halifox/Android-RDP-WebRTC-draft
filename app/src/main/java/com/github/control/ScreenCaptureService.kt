@@ -96,7 +96,7 @@ class ScreenCaptureService : LifecycleService() {
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
                         .addLast(ControlInboundHandler(controller = controller))
-                        .addLast(PeerConnectionInboundHandler(peerConnectionFactory, videoTrack))
+                        .addLast(PeerConnectionInboundHandler(peerConnectionFactory, videoTrack, isOffer = true))
                 }
             })
             .bind(40000)
