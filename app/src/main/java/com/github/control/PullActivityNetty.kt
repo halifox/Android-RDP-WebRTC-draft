@@ -19,14 +19,10 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import io.netty.handler.codec.LengthFieldPrepender
 import io.netty.handler.codec.bytes.ByteArrayDecoder
 import io.netty.handler.codec.bytes.ByteArrayEncoder
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.launch
 
 
-class PullActivityTCP : AppCompatActivity() {
+class PullActivityNetty : AppCompatActivity() {
     private val context = this
     private lateinit var binding: ActivityPullTcpBinding
 

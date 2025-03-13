@@ -39,19 +39,19 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".PullActivity"
+            android:name=".PullActivityWebRTC"
             android:exported="true" />
         <activity
-            android:name=".PullActivityTCP"
+            android:name=".PullActivityNetty"
             android:exported="true" />
 
         <service
-            android:name=".ScreenCaptureService"
+            android:name=".ScreenCaptureServiceWebRTC"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="mediaProjection" />
         <service
-            android:name=".ScreenCaptureServiceTCP"
+            android:name=".ScreenCaptureServiceNetty"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="mediaProjection" />

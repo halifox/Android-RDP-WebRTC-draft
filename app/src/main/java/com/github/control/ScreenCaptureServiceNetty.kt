@@ -8,7 +8,6 @@ import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
-import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
@@ -33,7 +32,7 @@ import io.netty.handler.codec.bytes.ByteArrayDecoder
 import io.netty.handler.codec.bytes.ByteArrayEncoder
 
 
-class ScreenCaptureServiceTCP : Service() {
+class ScreenCaptureServiceNetty : Service() {
     private val context = this
 
     private val bossGroup = NioEventLoopGroup()
@@ -139,7 +138,7 @@ class ScreenCaptureServiceTCP : Service() {
                                     Toast.makeText(context, "录屏出现异常，视频保存失败！", Toast.LENGTH_SHORT)
                                         .show()
                                 }
-                                this@ScreenCaptureServiceTCP.stopSelf()
+                                this@ScreenCaptureServiceNetty.stopSelf()
                             }
 
                             override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
@@ -205,14 +204,14 @@ class ScreenCaptureServiceTCP : Service() {
 
         @JvmStatic
         fun start(context: Context, screenCaptureIntent: Intent?) {
-            val intent = Intent(context, ScreenCaptureServiceTCP::class.java)
+            val intent = Intent(context, ScreenCaptureServiceNetty::class.java)
                 .putExtra(SCREEN_CAPTURE_INTENT, screenCaptureIntent)
             context.startService(intent)
         }
 
         @JvmStatic
         fun stop(context: Context) {
-            val intent = Intent(context, ScreenCaptureServiceTCP::class.java)
+            val intent = Intent(context, ScreenCaptureServiceNetty::class.java)
             context.stopService(intent)
         }
 

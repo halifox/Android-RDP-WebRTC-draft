@@ -22,7 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.github.control.PullActivity
+import com.github.control.PullActivityWebRTC
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,7 +90,7 @@ fun MasterScreen() {
                     Button(onClick = {
                         val serviceHost = serviceInfo.host
                         if (serviceHost != null) {
-                            PullActivity.start(context, serviceHost.hostName)
+                            PullActivityWebRTC.start(context, serviceHost.hostName)
                             return@Button
                         }
                         nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
@@ -102,7 +102,7 @@ fun MasterScreen() {
                                 serviceList[it] = serviceInfo
                                 val serviceHost = serviceInfo.host
                                 if (serviceHost != null) {
-                                    PullActivity.start(context, serviceHost.hostName)
+                                    PullActivityWebRTC.start(context, serviceHost.hostName)
                                 }
                             }
                         })

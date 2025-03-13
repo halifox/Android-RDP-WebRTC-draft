@@ -16,8 +16,6 @@ import io.netty.handler.codec.LengthFieldPrepender
 import io.netty.handler.codec.bytes.ByteArrayDecoder
 import io.netty.handler.codec.bytes.ByteArrayEncoder
 import kotlinx.coroutines.channels.Channel
-import org.webrtc.DefaultVideoDecoderFactory
-import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.EglBase
 import org.webrtc.HardwareVideoDecoderFactory
 import org.webrtc.HardwareVideoEncoderFactory
@@ -27,7 +25,7 @@ import org.webrtc.RendererCommon
 import org.webrtc.SurfaceTextureHelper
 
 
-class PullActivity : AppCompatActivity() {
+class PullActivityWebRTC : AppCompatActivity() {
     private val context = this
     private lateinit var binding: ActivityPullBinding
 
@@ -128,7 +126,7 @@ class PullActivity : AppCompatActivity() {
     companion object {
         @JvmStatic
         fun start(context: Context, host: String) {
-            val starter = Intent(context, PullActivity::class.java)
+            val starter = Intent(context, PullActivityWebRTC::class.java)
                 .putExtra("host", host)
             context.startActivity(starter)
         }

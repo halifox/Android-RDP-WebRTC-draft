@@ -31,7 +31,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.blankj.utilcode.util.ServiceUtils
 import com.github.control.MyAccessibilityService
-import com.github.control.ScreenCaptureService
+import com.github.control.ScreenCaptureServiceWebRTC
 import org.koin.compose.koinInject
 
 
@@ -51,7 +51,7 @@ fun SlaveScreen() {
 
     val screenCaptureLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) {
         if (it.resultCode == AppCompatActivity.RESULT_OK && it.data != null) {
-            ScreenCaptureService.start(context, it.data)
+            ScreenCaptureServiceWebRTC.start(context, it.data)
             checkState()
         }
     }
@@ -99,7 +99,7 @@ fun SlaveScreen() {
                 }
                 Button(
                     onClick = {
-                        ScreenCaptureService.stop(context)
+                        ScreenCaptureServiceWebRTC.stop(context)
                         checkState()
                     },
                     enabled = screenCaptureServiceEnabled
@@ -112,7 +112,7 @@ fun SlaveScreen() {
 }
 
 private fun isServiceRunning(context: Context): Boolean {
-    return ServiceUtils.isServiceRunning(ScreenCaptureService::class.java)
+    return ServiceUtils.isServiceRunning(ScreenCaptureServiceWebRTC::class.java)
 }
 
 private fun isAccessibilityEnabled(context: Context): Boolean {

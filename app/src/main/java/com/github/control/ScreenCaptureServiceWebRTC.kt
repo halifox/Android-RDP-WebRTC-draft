@@ -32,7 +32,7 @@ import org.webrtc.ScreenCapturerAndroid
 import org.webrtc.SurfaceTextureHelper
 
 
-class ScreenCaptureService : LifecycleService() {
+class ScreenCaptureServiceWebRTC : LifecycleService() {
     private val context = this
 
     private val bossGroup = NioEventLoopGroup()
@@ -196,14 +196,14 @@ class ScreenCaptureService : LifecycleService() {
 
         @JvmStatic
         fun start(context: Context, screenCaptureIntent: Intent?) {
-            val intent = Intent(context, ScreenCaptureService::class.java)
+            val intent = Intent(context, ScreenCaptureServiceWebRTC::class.java)
                 .putExtra(SCREEN_CAPTURE_INTENT, screenCaptureIntent)
             context.startService(intent)
         }
 
         @JvmStatic
         fun stop(context: Context) {
-            val intent = Intent(context, ScreenCaptureService::class.java)
+            val intent = Intent(context, ScreenCaptureServiceWebRTC::class.java)
             context.stopService(intent)
         }
 
