@@ -44,6 +44,9 @@
         <activity
             android:name=".PullActivityNetty"
             android:exported="true" />
+        <activity
+            android:name=".PullActivityNettyImage"
+            android:exported="true" />
 
         <service
             android:name=".ScreenCaptureServiceWebRTC"
@@ -55,6 +58,12 @@
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="mediaProjection" />
+        <service
+            android:name=".ScreenCaptureServiceNettyImage"
+            android:enabled="true"
+            android:exported="true"
+            android:foregroundServiceType="mediaProjection" />
+
         <service
             android:name=".MyAccessibilityService"
             android:enabled="true"

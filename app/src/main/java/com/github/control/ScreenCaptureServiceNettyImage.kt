@@ -4,18 +4,18 @@ import android.app.Activity
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
-import android.media.MediaCodec
-import android.media.MediaCodecInfo
-import android.media.MediaFormat
+import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
 import android.util.Log
-import android.widget.Toast
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationChannelGroupCompat
 import androidx.core.app.NotificationCompat
@@ -35,11 +35,17 @@ import io.netty.handler.codec.bytes.ByteArrayEncoder
 import org.koin.android.ext.android.inject
 
 
-class ScreenCaptureServiceNetty : Service() {
+class ScreenCaptureServiceNettyImage : Service() {
     private val context = this
 
     private val bossGroup = NioEventLoopGroup()
     private val workerGroup = NioEventLoopGroup()
+    private val handlerThread = HandlerThread("screenshot", 10).apply {
+        start()
+    }
+    private val screenshotHandler = Handler(handlerThread.looper)
+    lateinit var mediaProjection: MediaProjection
+    lateinit var virtualDisplay: VirtualDisplay
     private val nsdManager by inject<NsdManager>()
     private val registrationListener = object : NsdManager.RegistrationListener {
         private val TAG = "NsdManager"
@@ -65,6 +71,7 @@ class ScreenCaptureServiceNetty : Service() {
         Log.d("TAG", "onCreate: ")
         startForeground()
         startServer()
+
         val serviceInfo = NsdServiceInfo().apply {
             serviceName = "control"
             serviceType = "_control._tcp."
@@ -78,11 +85,10 @@ class ScreenCaptureServiceNetty : Service() {
         Log.d("TAG", "onDestroy: ")
         workerGroup.shutdownGracefully()
         bossGroup.shutdownGracefully()
+        handlerThread.quit()
         nsdManager.unregisterService(registrationListener)
     }
 
-    lateinit var mediaProjection: MediaProjection
-    lateinit var virtualDisplay: VirtualDisplay
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("TAG", "onStartCommand: ")
         val screenCaptureIntent = intent?.getParcelableExtra<Intent?>(SCREEN_CAPTURE_INTENT)
@@ -90,14 +96,40 @@ class ScreenCaptureServiceNetty : Service() {
             mediaProjection = getSystemService(MediaProjectionManager::class.java)!!.getMediaProjection(Activity.RESULT_OK, screenCaptureIntent)
             mediaProjection.registerCallback(object : MediaProjection.Callback() {
                 override fun onStop() {
-                    Log.d("TAG", "onStop: ")
                     stopSelf()
                 }
             }, null)
+
+            val imageReader = ImageReader.newInstance(ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), PixelFormat.RGBA_8888, 2)
+            imageReader.setOnImageAvailableListener({
+                Log.d("TAG", "onImageAvailable:${it} ")
+//                val image = it.acquireLatestImage()
+//
+//
+//                val planes = image.planes
+//                val buffer = planes[0].buffer
+//                val data = ByteArray(buffer.remaining())
+//                buffer.get(data)
+//                Log.d("TAG", "data:${data.toList()} ")
+//
+////                ctx?.writeAndFlush(data)
+//
+//                image.close()
+            }, screenshotHandler)
+
+
+            virtualDisplay = mediaProjection.createVirtualDisplay(
+                "ScreenRecorder",
+                ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), ScreenUtils.getScreenDensityDpi(),
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC or DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION,
+                imageReader.surface, null, null,
+            )
+
         }
         return super.onStartCommand(intent, flags, startId)
     }
 
+    var ctx: ChannelHandlerContext? = null
 
     private fun startServer() {
         ServerBootstrap()
@@ -111,64 +143,13 @@ class ScreenCaptureServiceNetty : Service() {
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
                         .addLast(object : SimpleChannelInboundHandler<ByteArray>() {
-                            val videoFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight())
-                                .apply {
-                                    setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)  // 硬件加速
-                                    setInteger(MediaFormat.KEY_BIT_RATE, 1_000_000)  // 足够的比特率，避免过低影响质量
-                                    setInteger(MediaFormat.KEY_FRAME_RATE, 60)  // 高帧率减少延迟
-                                    setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)  // 每帧都是 I 帧
-                                }
-
-
-                            val mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
-                                .apply {
-                                    configure(videoFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-                                }
-
                             override fun channelActive(ctx: ChannelHandlerContext) {
-                                try {
-                                    virtualDisplay = mediaProjection.createVirtualDisplay(
-                                        "VirtualScreen", ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), ScreenUtils.getScreenDensityDpi(),
-                                        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, mediaCodec.createInputSurface(), null, null
-                                    )
-                                } catch (e: java.lang.Exception) {
-                                    e.printStackTrace()
-                                    Toast.makeText(context, "virtualDisplay创建录屏异常，请退出重试！", Toast.LENGTH_SHORT)
-                                        .show()
-                                }
-
-                                mediaCodec.start();
-                                Thread {
-                                    val bufferInfo = MediaCodec.BufferInfo()
-                                    while (true) {
-                                        val index = mediaCodec.dequeueOutputBuffer(bufferInfo, 10);//超时时间：10微秒
-                                        if (index >= 0) {
-                                            val buffer = mediaCodec.getOutputBuffer(index)!!
-                                            val outData = ByteArray(bufferInfo.size)
-                                            buffer.get(outData)
-//                                            val sps = mediaCodec.getOutputFormat()
-//                                                .getByteBuffer("csd-0");
-//                                            val pps = mediaCodec.getOutputFormat()
-//                                                .getByteBuffer("csd-1");
-                                            ctx.writeAndFlush(outData)
-                                            mediaCodec.releaseOutputBuffer(index, false);
-                                        }
-                                    }
-                                }.start()
+                                this@ScreenCaptureServiceNettyImage.ctx = ctx
                             }
 
                             override fun channelInactive(ctx: ChannelHandlerContext) {
-                                try {
-                                    mediaCodec.stop()
-                                    mediaCodec.reset()
-                                    virtualDisplay.release()
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                    //有异常，保存失败，弹出提示
-                                    Toast.makeText(context, "录屏出现异常，视频保存失败！", Toast.LENGTH_SHORT)
-                                        .show()
-                                }
-                                this@ScreenCaptureServiceNetty.stopSelf()
+                                this@ScreenCaptureServiceNettyImage.ctx = null
+                                this@ScreenCaptureServiceNettyImage.stopSelf()
                             }
 
                             override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
@@ -177,7 +158,7 @@ class ScreenCaptureServiceNetty : Service() {
                         })
                 }
             })
-            .bind(40002)
+            .bind(40003)
             .apply {
                 addListener { future ->
                     if (future.isSuccess) {
@@ -234,14 +215,14 @@ class ScreenCaptureServiceNetty : Service() {
 
         @JvmStatic
         fun start(context: Context, screenCaptureIntent: Intent?) {
-            val intent = Intent(context, ScreenCaptureServiceNetty::class.java)
+            val intent = Intent(context, ScreenCaptureServiceNettyImage::class.java)
                 .putExtra(SCREEN_CAPTURE_INTENT, screenCaptureIntent)
             context.startService(intent)
         }
 
         @JvmStatic
         fun stop(context: Context) {
-            val intent = Intent(context, ScreenCaptureServiceNetty::class.java)
+            val intent = Intent(context, ScreenCaptureServiceNettyImage::class.java)
             context.stopService(intent)
         }
 

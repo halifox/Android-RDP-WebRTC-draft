@@ -1,5 +1,6 @@
 package com.github.control.ui
 
+import android.content.Intent
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.util.Log
@@ -22,6 +23,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.github.control.PullActivityNetty
+import com.github.control.PullActivityNettyImage
 import com.github.control.PullActivityWebRTC
 import org.koin.compose.koinInject
 
@@ -90,7 +93,9 @@ fun MasterScreen() {
                     Button(onClick = {
                         val serviceHost = serviceInfo.host
                         if (serviceHost != null) {
-                            PullActivityWebRTC.start(context, serviceHost.hostName)
+                            val starter = Intent(context, PullActivityNetty::class.java)
+                                .putExtra("host", serviceHost.hostName)
+                            context.startActivity(starter)
                             return@Button
                         }
                         nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
@@ -102,7 +107,9 @@ fun MasterScreen() {
                                 serviceList[it] = serviceInfo
                                 val serviceHost = serviceInfo.host
                                 if (serviceHost != null) {
-                                    PullActivityWebRTC.start(context, serviceHost.hostName)
+                                    val starter = Intent(context, PullActivityNetty::class.java)
+                                        .putExtra("host", serviceHost.hostName)
+                                    context.startActivity(starter)
                                 }
                             }
                         })
