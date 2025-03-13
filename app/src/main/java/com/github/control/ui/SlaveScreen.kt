@@ -53,7 +53,7 @@ fun SlaveScreen() {
 
     val screenCaptureLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) {
         if (it.resultCode == AppCompatActivity.RESULT_OK && it.data != null) {
-            ScreenCaptureServiceNetty.start(context, it.data)
+            ScreenCaptureServiceNettyImage.start(context, it.data)
             checkState()
         }
     }
@@ -101,7 +101,7 @@ fun SlaveScreen() {
                 }
                 Button(
                     onClick = {
-                        ScreenCaptureServiceNetty.stop(context)
+                        ScreenCaptureServiceNettyImage.stop(context)
                         checkState()
                     },
                     enabled = screenCaptureServiceEnabled
@@ -114,7 +114,7 @@ fun SlaveScreen() {
 }
 
 private fun isServiceRunning(context: Context): Boolean {
-    return ServiceUtils.isServiceRunning(ScreenCaptureServiceNetty::class.java)
+    return ServiceUtils.isServiceRunning(ScreenCaptureServiceNettyImage::class.java)
 }
 
 private fun isAccessibilityEnabled(context: Context): Boolean {

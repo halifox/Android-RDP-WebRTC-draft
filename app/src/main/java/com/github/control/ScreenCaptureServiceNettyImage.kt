@@ -102,27 +102,19 @@ class ScreenCaptureServiceNettyImage : Service() {
 
             val imageReader = ImageReader.newInstance(ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), PixelFormat.RGBA_8888, 2)
             imageReader.setOnImageAvailableListener({
-                Log.d("TAG", "onImageAvailable:${it} ")
-//                val image = it.acquireLatestImage()
-//
-//
-//                val planes = image.planes
-//                val buffer = planes[0].buffer
-//                val data = ByteArray(buffer.remaining())
-//                buffer.get(data)
-//                Log.d("TAG", "data:${data.toList()} ")
-//
-////                ctx?.writeAndFlush(data)
-//
-//                image.close()
+                val image = it.acquireLatestImage()
+                val planes = image.planes
+                val buffer = planes[0].buffer
+                val data = ByteArray(buffer.remaining())
+                buffer.get(data)
+                //todo
+                image.close()
             }, screenshotHandler)
 
 
             virtualDisplay = mediaProjection.createVirtualDisplay(
-                "ScreenRecorder",
-                ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), ScreenUtils.getScreenDensityDpi(),
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC or DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION,
-                imageReader.surface, null, null,
+                "VirtualScreen", ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), ScreenUtils.getScreenDensityDpi(),
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.surface, null, null
             )
 
         }

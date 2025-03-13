@@ -93,7 +93,7 @@ fun MasterScreen() {
                     Button(onClick = {
                         val serviceHost = serviceInfo.host
                         if (serviceHost != null) {
-                            val starter = Intent(context, PullActivityNetty::class.java)
+                            val starter = Intent(context, PullActivityNettyImage::class.java)
                                 .putExtra("host", serviceHost.hostName)
                             context.startActivity(starter)
                             return@Button
@@ -107,7 +107,7 @@ fun MasterScreen() {
                                 serviceList[it] = serviceInfo
                                 val serviceHost = serviceInfo.host
                                 if (serviceHost != null) {
-                                    val starter = Intent(context, PullActivityNetty::class.java)
+                                    val starter = Intent(context, PullActivityNettyImage::class.java)
                                         .putExtra("host", serviceHost.hostName)
                                     context.startActivity(starter)
                                 }
