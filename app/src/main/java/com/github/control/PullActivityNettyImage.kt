@@ -9,6 +9,7 @@ import android.view.MotionEvent
 import android.view.SurfaceHolder
 import androidx.appcompat.app.AppCompatActivity
 import com.github.control.databinding.ActivityPullTcpBinding
+import com.github.control.databinding.ActivityPullTcpImageBinding
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
@@ -25,37 +26,16 @@ import kotlinx.coroutines.channels.Channel
 
 class PullActivityNettyImage : AppCompatActivity() {
     private val context = this
-    private lateinit var binding: ActivityPullTcpBinding
+    private lateinit var binding: ActivityPullTcpImageBinding
 
     private val eventLoopGroup = NioEventLoopGroup()
-    private val eventLoopGroup2 = NioEventLoopGroup()
     private val inetHost by lazy { intent.getStringExtra("host") }
 
 
-    private lateinit var decoder: MediaCodec
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityPullTcpBinding.inflate(layoutInflater)
+        binding = ActivityPullTcpImageBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        binding.SurfaceView.holder.addCallback(object : SurfaceHolder.Callback {
-            override fun surfaceCreated(holder: SurfaceHolder) {
-                val mediaFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 1280, 800)
-                decoder = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
-                    .apply {
-                        configure(mediaFormat, holder.surface, null, 0)
-                        start()
-                    }
-            }
-
-            override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-            }
-
-            override fun surfaceDestroyed(holder: SurfaceHolder) {
-            }
-        })
-
         initService()
     }
 
@@ -102,18 +82,20 @@ class PullActivityNettyImage : AppCompatActivity() {
                             }
 
 
-
                             //信道读消息
                             override fun channelRead0(ctx: ChannelHandlerContext, data: ByteArray) {
                                 val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
-                                val canvas = binding.SurfaceView.holder.lockCanvas()
-                                canvas.drawBitmap(bitmap, 0f, 0f, null)
-                                binding.SurfaceView.holder.unlockCanvasAndPost(canvas)
+                                runOnUiThread {
+                                    binding.SurfaceView.setImageBitmap(bitmap)
+                                }
+//                                val canvas = binding.SurfaceView.holder.lockCanvas()
+//                                canvas.drawBitmap(bitmap, 0f, 0f, null)
+//                                binding.SurfaceView.holder.unlockCanvasAndPost(canvas)
                             }
                         })
                 }
             })
-            .connect(inetHost, 40003)
+            .connect(inetHost, 40000)
             .apply {
                 addListener { future ->
                     if (future.isSuccess) {
@@ -135,10 +117,8 @@ class PullActivityNettyImage : AppCompatActivity() {
     }
 
 
-
     override fun onDestroy() {
         super.onDestroy()
         eventLoopGroup.shutdownGracefully()
-        eventLoopGroup2.shutdownGracefully()
     }
 }

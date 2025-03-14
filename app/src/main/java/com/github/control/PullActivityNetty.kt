@@ -124,7 +124,7 @@ class PullActivityNetty : AppCompatActivity() {
                         })
                 }
             })
-            .connect(inetHost, 40002)
+            .connect(inetHost, 40000)
             .apply {
                 addListener { future ->
                     if (future.isSuccess) {

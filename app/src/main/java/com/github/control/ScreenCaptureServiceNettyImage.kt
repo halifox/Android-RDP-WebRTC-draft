@@ -1,5 +1,6 @@
 package com.github.control
 
+import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
@@ -15,20 +16,28 @@ import io.netty.channel.SimpleChannelInboundHandler
 
 
 class ScreenCaptureServiceNettyImage : ScreenCaptureService0() {
-    var ctx: ChannelHandlerContext? = null
+    private var ctx: ChannelHandlerContext? = null
 
     private val handlerThread = HandlerThread("screenshot", 10).apply {
         start()
     }
+
+    private var flag = false
     private val imageReader = ImageReader.newInstance(ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), PixelFormat.RGBA_8888, 2)
         .apply {
+            val data = ByteArray((ScreenUtils.getScreenWidth() + 8) * ScreenUtils.getScreenHeight() * 4)
             setOnImageAvailableListener({
                 val image = it.acquireLatestImage()
                 val planes = image.planes
                 val buffer = planes[0].buffer
-                val data = kotlin.ByteArray(buffer.remaining())
                 buffer.get(data)
-                //todo
+
+
+//                if (flag||true) {
+//                    flag = false
+//                    ctx?.writeAndFlush(data)
+//                }
+
                 image.close()
             }, android.os.Handler(handlerThread.looper))
         }
@@ -59,7 +68,7 @@ class ScreenCaptureServiceNettyImage : ScreenCaptureService0() {
             }
 
             override fun channelRead0(ctx: ChannelHandlerContext, msg: ByteArray) {
-
+                flag = true
             }
         })
 
