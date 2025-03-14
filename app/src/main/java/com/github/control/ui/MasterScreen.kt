@@ -1,5 +1,6 @@
 package com.github.control.ui
 
+import android.content.Context
 import android.content.Intent
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
@@ -20,12 +21,10 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.github.control.PullActivityNetty
-import com.github.control.PullActivityNettyImage
-import com.github.control.PullActivityWebRTC
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,28 +90,7 @@ fun MasterScreen() {
                 ) {
                     Text(text = serviceInfo.toString(), modifier = Modifier.weight(1f))
                     Button(onClick = {
-                        val serviceHost = serviceInfo.host
-                        if (serviceHost != null) {
-                            val starter = Intent(context, PullActivityNettyImage::class.java)
-                                .putExtra("host", serviceHost.hostName)
-                            context.startActivity(starter)
-                            return@Button
-                        }
-                        nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
-                            override fun onResolveFailed(serviceInfo: NsdServiceInfo?, errorCode: Int) {
-
-                            }
-
-                            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                                serviceList[it] = serviceInfo
-                                val serviceHost = serviceInfo.host
-                                if (serviceHost != null) {
-                                    val starter = Intent(context, PullActivityNettyImage::class.java)
-                                        .putExtra("host", serviceHost.hostName)
-                                    context.startActivity(starter)
-                                }
-                            }
-                        })
+                        resolveAndStartService(serviceInfo, context, nsdManager, serviceList, it)
                     }) {
                         Text(text = "连接")
                     }
@@ -120,4 +98,40 @@ fun MasterScreen() {
             }
         }
     }
+}
+
+
+private fun resolveAndStartService(
+    serviceInfo: NsdServiceInfo,
+    context: Context,
+    nsdManager: NsdManager,
+    serviceList: SnapshotStateList<NsdServiceInfo>,
+    it: Int
+) {
+    val serviceHost = serviceInfo.host
+    val isResolve = serviceHost != null
+    if (isResolve) {
+        startPullScreen(context, serviceHost.hostName)
+    } else {
+        nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
+            override fun onResolveFailed(serviceInfo: NsdServiceInfo?, errorCode: Int) {
+
+            }
+
+            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+                serviceList[it] = serviceInfo
+                val serviceHost = serviceInfo.host
+                val isResolve = serviceHost != null
+                if (isResolve) {
+                    startPullScreen(context, serviceHost.hostName)
+                }
+            }
+        })
+    }
+}
+
+private fun startPullScreen(context: Context, host: String) {
+    val starter = Intent(context, getPullActivity())
+        .putExtra("host", host)
+    context.startActivity(starter)
 }

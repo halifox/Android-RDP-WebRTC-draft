@@ -31,9 +31,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.blankj.utilcode.util.ServiceUtils
 import com.github.control.MyAccessibilityService
-import com.github.control.ScreenCaptureServiceNetty
-import com.github.control.ScreenCaptureServiceNettyImage
-import com.github.control.ScreenCaptureServiceWebRTC
+import com.github.control.ScreenCaptureService0
 import org.koin.compose.koinInject
 
 
@@ -53,7 +51,7 @@ fun SlaveScreen() {
 
     val screenCaptureLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) {
         if (it.resultCode == AppCompatActivity.RESULT_OK && it.data != null) {
-            ScreenCaptureServiceNettyImage.start(context, it.data)
+            startService(context, it.data)
             checkState()
         }
     }
@@ -101,7 +99,7 @@ fun SlaveScreen() {
                 }
                 Button(
                     onClick = {
-                        ScreenCaptureServiceNettyImage.stop(context)
+                        stopService(context)
                         checkState()
                     },
                     enabled = screenCaptureServiceEnabled
@@ -113,8 +111,19 @@ fun SlaveScreen() {
     )
 }
 
+
+private fun startService(context: Context, screenCaptureIntent: Intent?) {
+    context.startService(Intent(context, getScreenCaptureService()).apply {
+        putExtra(ScreenCaptureService0.SCREEN_CAPTURE_INTENT, screenCaptureIntent)
+    })
+}
+
+private fun stopService(context: Context) {
+    context.stopService(Intent(context, getScreenCaptureService()))
+}
+
 private fun isServiceRunning(context: Context): Boolean {
-    return ServiceUtils.isServiceRunning(ScreenCaptureServiceNettyImage::class.java)
+    return ServiceUtils.isServiceRunning(getScreenCaptureService())
 }
 
 private fun isAccessibilityEnabled(context: Context): Boolean {
