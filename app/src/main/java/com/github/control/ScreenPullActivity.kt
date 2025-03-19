@@ -25,7 +25,7 @@ import org.webrtc.RendererCommon
 import org.webrtc.SurfaceTextureHelper
 
 
-class PullActivityWebRTC : AppCompatActivity() {
+class ScreenPullActivity : AppCompatActivity() {
     private val context = this
     private lateinit var binding: ActivityPullBinding
 
@@ -126,7 +126,7 @@ class PullActivityWebRTC : AppCompatActivity() {
     companion object {
         @JvmStatic
         fun start(context: Context, host: String) {
-            val starter = Intent(context, PullActivityWebRTC::class.java)
+            val starter = Intent(context, ScreenPullActivity::class.java)
                 .putExtra("host", host)
             context.startActivity(starter)
         }

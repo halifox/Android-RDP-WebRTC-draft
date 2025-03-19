@@ -25,7 +25,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.github.control.PullActivityWebRTC
+import com.github.control.ScreenPullActivity
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,7 +132,7 @@ private fun resolveAndStartService(
 }
 
 private fun startPullScreen(context: Context, host: String) {
-    val starter = Intent(context, PullActivityWebRTC::class.java)
+    val starter = Intent(context, ScreenPullActivity::class.java)
         .putExtra("host", host)
     context.startActivity(starter)
 }

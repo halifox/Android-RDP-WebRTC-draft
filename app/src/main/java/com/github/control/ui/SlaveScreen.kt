@@ -1,9 +1,6 @@
 package com.github.control.ui
 
-import android.content.Context
-import android.content.Intent
 import android.media.projection.MediaProjectionManager
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -29,10 +26,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import com.blankj.utilcode.util.ServiceUtils
 import com.github.control.MyAccessibilityService
-import com.github.control.ScreenCaptureService0
-import com.github.control.ScreenCaptureServiceWebRTC
+import com.github.control.ScreenCaptureService
 import org.koin.compose.koinInject
 
 
@@ -42,17 +37,18 @@ fun SlaveScreen() {
     val mediaProjectionManager = koinInject<MediaProjectionManager>()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
-    var accessibilityEnabled by remember { mutableStateOf(isAccessibilityEnabled(context)) }
-    var screenCaptureServiceEnabled by remember { mutableStateOf(isServiceRunning(context)) }
+    var accessibilityEnabled by remember { mutableStateOf(MyAccessibilityService.isAccessibilityEnabled(context)) }
+    var screenCaptureServiceEnabled by remember { mutableStateOf(ScreenCaptureService.isServiceRunning(context)) }
     fun checkState() {
-        accessibilityEnabled = isAccessibilityEnabled(context)
-        screenCaptureServiceEnabled = isServiceRunning(context)
+        accessibilityEnabled = MyAccessibilityService.isAccessibilityEnabled(context)
+        screenCaptureServiceEnabled = ScreenCaptureService.isServiceRunning(context)
     }
 
 
     val screenCaptureLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) {
-        if (it.resultCode == AppCompatActivity.RESULT_OK && it.data != null) {
-            startService(context, it.data)
+        val screenCaptureIntent = it.data
+        if (it.resultCode == AppCompatActivity.RESULT_OK && screenCaptureIntent != null) {
+            ScreenCaptureService.start(context, screenCaptureIntent)
             checkState()
         }
     }
@@ -83,7 +79,7 @@ fun SlaveScreen() {
                     Text("无障碍权限", modifier = Modifier.weight(1f))
                     Button(
                         onClick = {
-                            openAccessibilitySettings(context)
+                            MyAccessibilityService.openAccessibilitySettings(context)
                         },
                         enabled = !accessibilityEnabled,
                     ) {
@@ -100,7 +96,7 @@ fun SlaveScreen() {
                 }
                 Button(
                     onClick = {
-                        stopService(context)
+                        ScreenCaptureService.stop(context)
                         checkState()
                     },
                     enabled = screenCaptureServiceEnabled
@@ -110,31 +106,4 @@ fun SlaveScreen() {
             }
         }
     )
-}
-
-
-private fun startService(context: Context, screenCaptureIntent: Intent?) {
-    context.startService(Intent(context, ScreenCaptureServiceWebRTC::class.java).apply {
-        putExtra(ScreenCaptureService0.SCREEN_CAPTURE_INTENT, screenCaptureIntent)
-    })
-}
-
-private fun stopService(context: Context) {
-    context.stopService(Intent(context, ScreenCaptureServiceWebRTC::class.java))
-}
-
-private fun isServiceRunning(context: Context): Boolean {
-    return ServiceUtils.isServiceRunning(ScreenCaptureServiceWebRTC::class.java)
-}
-
-private fun isAccessibilityEnabled(context: Context): Boolean {
-    val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-    return enabledServices != null && enabledServices.contains(MyAccessibilityService::class.java.name)
-}
-
-private fun openAccessibilitySettings(context: Context) {
-    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    }
-    context.startActivity(intent)
 }
