@@ -41,7 +41,6 @@ class ScreenCaptureServiceWebRTC : ScreenCaptureService0() {
                     dispose()
                 }
             })
-
         }
     }
 

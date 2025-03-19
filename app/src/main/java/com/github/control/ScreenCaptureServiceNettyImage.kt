@@ -58,7 +58,6 @@ class ScreenCaptureServiceNettyImage : ScreenCaptureService0() {
         bitmap.recycle()
     }
 
-    @Synchronized
     fun onImageAvailable(reader: ImageReader) {
         reader.acquireLatestImage()
             ?.use {

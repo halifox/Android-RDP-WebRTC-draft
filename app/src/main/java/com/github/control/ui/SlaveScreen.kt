@@ -32,6 +32,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.blankj.utilcode.util.ServiceUtils
 import com.github.control.MyAccessibilityService
 import com.github.control.ScreenCaptureService0
+import com.github.control.ScreenCaptureServiceWebRTC
 import org.koin.compose.koinInject
 
 
@@ -113,17 +114,17 @@ fun SlaveScreen() {
 
 
 private fun startService(context: Context, screenCaptureIntent: Intent?) {
-    context.startService(Intent(context, getScreenCaptureService()).apply {
+    context.startService(Intent(context, ScreenCaptureServiceWebRTC::class.java).apply {
         putExtra(ScreenCaptureService0.SCREEN_CAPTURE_INTENT, screenCaptureIntent)
     })
 }
 
 private fun stopService(context: Context) {
-    context.stopService(Intent(context, getScreenCaptureService()))
+    context.stopService(Intent(context, ScreenCaptureServiceWebRTC::class.java))
 }
 
 private fun isServiceRunning(context: Context): Boolean {
-    return ServiceUtils.isServiceRunning(getScreenCaptureService())
+    return ServiceUtils.isServiceRunning(ScreenCaptureServiceWebRTC::class.java)
 }
 
 private fun isAccessibilityEnabled(context: Context): Boolean {
