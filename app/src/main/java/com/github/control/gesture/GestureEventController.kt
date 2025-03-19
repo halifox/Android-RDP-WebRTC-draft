@@ -1,81 +1,69 @@
-package com.github.control.anydesk
+package com.github.control.gesture
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.view.KeyEvent
 import android.view.MotionEvent
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+
 
 /**
  * 处理触摸事件并将其转换为无障碍手势的事件处理类
  *
- * @property accessibilityService 关联的无障碍服务实例
  */
-class InputEventControllerDelegate(
-    private val accessibilityService: AccessibilityService,
-) : IControllerDelegate {
+class GestureEventController : KoinComponent {
     private var isGestureActive = false // 标识当前是否有手势在进行
+    private val gestureServiceDelegate: GestureServiceDelegate by inject()
 
     //手势跟踪器列表，最多支持 16 个手势点
     private val trackers: List<GestureTracker> = List(16) { GestureTracker() }
 
-    override fun injectInputEvent(inputEvent: MotionEvent, displayId: Int, injectMode: Int): Boolean {
-        handleEvent(inputEvent)
+    fun performInputEvent(motionEvent: MotionEvent): Boolean {
+        val actionMasked = motionEvent.actionMasked
+        val actionIndex = motionEvent.actionIndex
+        val pointerId = motionEvent.getPointerId(actionIndex)
+        val x = motionEvent.getX(actionIndex)
+        val y = motionEvent.getY(actionIndex)
+        when (actionMasked) {
+            MotionEvent.ACTION_DOWN -> onActionDown(pointerId, x, y, motionEvent)
+            MotionEvent.ACTION_UP -> onActionUp(pointerId, x, y, motionEvent)
+            MotionEvent.ACTION_MOVE -> onActionMove(pointerId, x, y, motionEvent)
+            MotionEvent.ACTION_CANCEL -> onActionCancel(pointerId, x, y, motionEvent)
+            MotionEvent.ACTION_OUTSIDE -> {}
+            MotionEvent.ACTION_POINTER_DOWN -> onActionPointerDown(pointerId, x, y, motionEvent)
+            MotionEvent.ACTION_POINTER_UP -> onActionPointerUp(pointerId, x, y, motionEvent)
+            MotionEvent.ACTION_HOVER_MOVE -> {}
+            MotionEvent.ACTION_SCROLL -> {}
+            MotionEvent.ACTION_HOVER_ENTER -> {}
+            MotionEvent.ACTION_HOVER_EXIT -> {}
+            MotionEvent.ACTION_BUTTON_PRESS -> {}
+            MotionEvent.ACTION_BUTTON_RELEASE -> {}
+        }
+        motionEvent.recycle()
         return true
     }
 
-    override fun injectKeyEvent(keyEvent: KeyEvent) {
+    fun performKeyEvent(keyEvent: KeyEvent): Boolean {
         val action = keyEvent.action
         val keyCode = keyEvent.keyCode
         val isShiftPressed = keyEvent.isShiftPressed
         val isCtrlPressed = keyEvent.isCtrlPressed
-        when (keyCode) {
-            KeyEvent.KEYCODE_HOME -> accessibilityService.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
-            KeyEvent.KEYCODE_BACK -> accessibilityService.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
-            KeyEvent.KEYCODE_VOLUME_UP -> {}
-            KeyEvent.KEYCODE_VOLUME_DOWN -> {}
-            KeyEvent.KEYCODE_POWER -> {}
-            KeyEvent.KEYCODE_SPACE -> {}
-            KeyEvent.KEYCODE_MENU -> {}
-            KeyEvent.KEYCODE_APP_SWITCH -> accessibilityService.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS)
+        return when (keyCode) {
+            KeyEvent.KEYCODE_HOME -> gestureServiceDelegate.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+            KeyEvent.KEYCODE_BACK -> gestureServiceDelegate.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+            KeyEvent.KEYCODE_VOLUME_UP -> false
+            KeyEvent.KEYCODE_VOLUME_DOWN -> false
+            KeyEvent.KEYCODE_POWER -> false
+            KeyEvent.KEYCODE_SPACE -> false
+            KeyEvent.KEYCODE_MENU -> false
+            KeyEvent.KEYCODE_APP_SWITCH -> gestureServiceDelegate.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS)
+            else -> false
         }
     }
 
-    override fun injectGlobalAction(action: Int): Boolean {
-        return accessibilityService.performGlobalAction(action)
-    }
-
-    /**
-     * 处理 MotionEvent 事件并转换为相应的手势操作
-     *
-     * @param motionEvent 触摸事件
-     */
-    fun handleEvent(motionEvent: MotionEvent) {
-        try {
-            val actionMasked = motionEvent.actionMasked
-            val actionIndex = motionEvent.actionIndex
-            val pointerId = motionEvent.getPointerId(actionIndex)
-            val x = motionEvent.getX(actionIndex)
-            val y = motionEvent.getY(actionIndex)
-
-            when (actionMasked) {
-                MotionEvent.ACTION_DOWN -> onActionDown(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_UP -> onActionUp(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_MOVE -> onActionMove(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_CANCEL -> onActionCancel(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_OUTSIDE -> {}
-                MotionEvent.ACTION_POINTER_DOWN -> onActionPointerDown(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_POINTER_UP -> onActionPointerUp(pointerId, x, y, motionEvent)
-                MotionEvent.ACTION_HOVER_MOVE -> {}
-                MotionEvent.ACTION_SCROLL -> {}
-                MotionEvent.ACTION_HOVER_ENTER -> {}
-                MotionEvent.ACTION_HOVER_EXIT -> {}
-                MotionEvent.ACTION_BUTTON_PRESS -> {}
-                MotionEvent.ACTION_BUTTON_RELEASE -> {}
-            }
-            motionEvent.recycle()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+    fun performGlobalAction(action: Int): Boolean {
+        return gestureServiceDelegate.performGlobalAction(action)
     }
 
     /**
@@ -89,7 +77,7 @@ class InputEventControllerDelegate(
             availableTracker.startTracking(pointerId, x, y)
             val builder = GestureDescription.Builder()
             builder.addStroke(availableTracker.stroke!!)
-            accessibilityService.dispatchGesture(builder.build(), null, null)
+            gestureServiceDelegate.dispatchGesture(builder.build(), null, null)
         }
     }
 
@@ -106,7 +94,7 @@ class InputEventControllerDelegate(
                     builder.addStroke(it.stroke!!)
                 }
             }
-            accessibilityService.dispatchGesture(builder.build(), null, null)
+            gestureServiceDelegate.dispatchGesture(builder.build(), null, null)
         }
     }
 
@@ -121,7 +109,7 @@ class InputEventControllerDelegate(
             builder.addStroke(tracker.stroke!!)
             isGestureActive = false
             resetAllTrackers()
-            accessibilityService.dispatchGesture(builder.build(), null, null)
+            gestureServiceDelegate.dispatchGesture(builder.build(), null, null)
         }
     }
 
@@ -151,7 +139,7 @@ class InputEventControllerDelegate(
                 }
             }
             tracker.reset()
-            accessibilityService.dispatchGesture(builder.build(), null, null)
+            gestureServiceDelegate.dispatchGesture(builder.build(), null, null)
         }
     }
 
@@ -172,7 +160,7 @@ class InputEventControllerDelegate(
             }
             availableTracker.startTracking(pointerId, x, y)
             builder.addStroke(availableTracker.stroke!!)
-            accessibilityService.dispatchGesture(builder.build(), null, null)
+            gestureServiceDelegate.dispatchGesture(builder.build(), null, null)
         }
     }
 

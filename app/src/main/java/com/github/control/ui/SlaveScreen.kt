@@ -26,7 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import com.github.control.MyAccessibilityService
+import com.github.control.gesture.GestureControlAccessibilityService
 import com.github.control.ScreenCaptureService
 import org.koin.compose.koinInject
 
@@ -37,10 +37,10 @@ fun SlaveScreen() {
     val mediaProjectionManager = koinInject<MediaProjectionManager>()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
-    var accessibilityEnabled by remember { mutableStateOf(MyAccessibilityService.isAccessibilityEnabled(context)) }
+    var accessibilityEnabled by remember { mutableStateOf(GestureControlAccessibilityService.isAccessibilityEnabled(context)) }
     var screenCaptureServiceEnabled by remember { mutableStateOf(ScreenCaptureService.isServiceRunning(context)) }
     fun checkState() {
-        accessibilityEnabled = MyAccessibilityService.isAccessibilityEnabled(context)
+        accessibilityEnabled = GestureControlAccessibilityService.isAccessibilityEnabled(context)
         screenCaptureServiceEnabled = ScreenCaptureService.isServiceRunning(context)
     }
 
@@ -79,7 +79,7 @@ fun SlaveScreen() {
                     Text("无障碍权限", modifier = Modifier.weight(1f))
                     Button(
                         onClick = {
-                            MyAccessibilityService.openAccessibilitySettings(context)
+                            GestureControlAccessibilityService.openAccessibilitySettings(context)
                         },
                         enabled = !accessibilityEnabled,
                     ) {

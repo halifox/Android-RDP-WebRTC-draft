@@ -33,7 +33,7 @@
             android:exported="true"
             android:foregroundServiceType="mediaProjection" />
         <service
-            android:name=".MyAccessibilityService"
+            android:name=".gesture.GestureControlAccessibilityService"
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">

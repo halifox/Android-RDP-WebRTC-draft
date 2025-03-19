@@ -7,11 +7,10 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import androidx.annotation.NonNull
 import com.blankj.utilcode.util.ScreenUtils
-import com.github.control.anydesk.IControllerDelegate
+import com.github.control.gesture.GestureEventController
 import java.lang.reflect.Method
 
-class Controller {
-    private var controllerDelegate: IControllerDelegate? = null
+class Controller(val controllerDelegate: GestureEventController) {
     private var lastTouchDown: Long = 0
     private val pointersState = PointersState()
     private val pointerProperties = Array(PointersState.MAX_POINTERS) {
@@ -48,16 +47,13 @@ class Controller {
         }
     }
 
-    fun setControllerDelegate(delegate: IControllerDelegate?) {
-        this.controllerDelegate = delegate
-    }
 
     fun injectInputEvent(event: MotionEvent, displayId: Int, injectMode: Int): Boolean {
-        return controllerDelegate?.injectInputEvent(event, displayId, injectMode) ?: false
+        return controllerDelegate.performInputEvent(event)
     }
 
     fun injectGlobalAction(action: Int): Boolean {
-        return controllerDelegate?.injectGlobalAction(action) ?: false
+        return controllerDelegate.performGlobalAction(action)
     }
 
     fun injectTouch(action: Int, pointerId: Int, position: Position, pressure: Float, actionButton: Int, buttons: Int): Boolean {

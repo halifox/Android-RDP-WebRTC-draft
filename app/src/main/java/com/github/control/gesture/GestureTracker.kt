@@ -1,4 +1,4 @@
-package com.github.control.anydesk;
+package com.github.control.gesture;
 
 import android.accessibilityservice.GestureDescription;
 import android.graphics.Path;
