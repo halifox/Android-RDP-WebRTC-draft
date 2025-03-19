@@ -3,7 +3,9 @@ package com.github.control
 import android.util.Log
 import android.view.MotionEvent
 import com.github.control.scrcpy.Controller
+import com.github.control.scrcpy.Point
 import com.github.control.scrcpy.Position
+import com.github.control.scrcpy.Size
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.PooledByteBufAllocator
 import io.netty.channel.ChannelHandlerContext
@@ -111,7 +113,7 @@ class ControlInboundHandler(
         val pressure = byteBuf.readFloat()
         val actionButton = byteBuf.readInt()
         val buttons = byteBuf.readInt()
-        val position = Position(x, y, screenWidth, screenHeight)
+        val position = Position(Point(x, y), Size(screenWidth, screenHeight))
         controller?.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
     }
 

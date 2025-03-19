@@ -1,191 +1,142 @@
-package com.github.control.scrcpy;
+package com.github.control.scrcpy
 
-import android.hardware.input.InputManager;
-import android.os.Build;
-import android.os.SystemClock;
-import android.view.InputDevice;
-import android.view.MotionEvent;
+import android.hardware.input.InputManager
+import android.os.Build
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
+import androidx.annotation.NonNull
+import com.blankj.utilcode.util.ScreenUtils
+import com.github.control.anydesk.IControllerDelegate
+import java.lang.reflect.Method
 
-import androidx.annotation.NonNull;
-
-import com.blankj.utilcode.util.ScreenUtils;
-import com.github.control.anydesk.IControllerDelegate;
-
-import java.lang.reflect.Method;
-
-public class Controller {
-    private static Method setActionButtonMethod;
-
-    private com.github.control.anydesk.IControllerDelegate IControllerDelegate;
-    private long lastTouchDown;
-
-    private final PointersState pointersState = new PointersState();
-    private final MotionEvent.PointerProperties[] pointerProperties = new MotionEvent.PointerProperties[PointersState.MAX_POINTERS];
-    private final MotionEvent.PointerCoords[] pointerCoords = new MotionEvent.PointerCoords[PointersState.MAX_POINTERS];
-
-    private static final int DEFAULT_DEVICE_ID = 0;
-
-    // control_msg.h values of the pointerId field in inject_touch_event message
-    private static final int POINTER_ID_MOUSE = -1;
-
-    public Controller() {
-        initPointers();
+class Controller {
+    private var controllerDelegate: IControllerDelegate? = null
+    private var lastTouchDown: Long = 0
+    private val pointersState = PointersState()
+    private val pointerProperties = Array(PointersState.MAX_POINTERS) {
+        MotionEvent.PointerProperties()
+            .apply { toolType = MotionEvent.TOOL_TYPE_FINGER }
+    }
+    private val pointerCoords = Array(PointersState.MAX_POINTERS) {
+        MotionEvent.PointerCoords()
+            .apply {
+                orientation = 0f
+                size = 0f
+            }
     }
 
-    private void initPointers() {
-        for (int i = 0; i < PointersState.MAX_POINTERS; ++i) {
-            MotionEvent.PointerProperties props = new MotionEvent.PointerProperties();
-            props.toolType = MotionEvent.TOOL_TYPE_FINGER;
+    companion object {
+        private const val DEFAULT_DEVICE_ID = 0
+        private const val POINTER_ID_MOUSE = -1
+        private var setActionButtonMethod: Method? = null
 
-            MotionEvent.PointerCoords coords = new MotionEvent.PointerCoords();
-            coords.orientation = 0;
-            coords.size = 0;
+        private fun getSetActionButtonMethod(): Method {
+            return setActionButtonMethod ?: MotionEvent::class.java.getMethod("setActionButton", Int::class.java)
+                .also {
+                    setActionButtonMethod = it
+                }
+        }
 
-            pointerProperties[i] = props;
-            pointerCoords[i] = coords;
+        fun setActionButton(event: MotionEvent, actionButton: Int): Boolean {
+            return try {
+                getSetActionButtonMethod().invoke(event, actionButton)
+                true
+            } catch (e: ReflectiveOperationException) {
+                false
+            }
         }
     }
 
-    public void setControllerDelegate(IControllerDelegate IControllerDelegate) {
-        this.IControllerDelegate = IControllerDelegate;
+    fun setControllerDelegate(delegate: IControllerDelegate?) {
+        this.controllerDelegate = delegate
     }
 
-    public boolean injectInputEvent(MotionEvent inputEvent, int displayId, int injectMode) {
-        if (IControllerDelegate != null) {
-            return IControllerDelegate.injectInputEvent(inputEvent, displayId, injectMode);
-        }
-        return false;
+    fun injectInputEvent(event: MotionEvent, displayId: Int, injectMode: Int): Boolean {
+        return controllerDelegate?.injectInputEvent(event, displayId, injectMode) ?: false
     }
 
-    public boolean injectGlobalAction(int action) {
-        if (IControllerDelegate != null) {
-            return IControllerDelegate.injectGlobalAction(action);
-        }
-        return false;
+    fun injectGlobalAction(action: Int): Boolean {
+        return controllerDelegate?.injectGlobalAction(action) ?: false
     }
 
-    public boolean injectTouch(int action, int pointerId, Position position, float pressure, int actionButton, int buttons) {
-        long now = SystemClock.uptimeMillis();
+    fun injectTouch(action: Int, pointerId: Int, position: Position, pressure: Float, actionButton: Int, buttons: Int): Boolean {
+        val now = SystemClock.uptimeMillis()
+        val point = mapToScreen(position)
+        val pointerIndex = pointersState.getPointerIndex(pointerId)
+        if (pointerIndex == -1) return false
 
-        Point point = mapToScreen(position);
-        int targetDisplayId = 0;
-
-        int pointerIndex = pointersState.getPointerIndex(pointerId);
-        if (pointerIndex == -1) {
-            // Too many pointers for touch event
-            return false;
+        val pointer = pointersState[pointerIndex].apply {
+            this.point = point
+            this.pressure = pressure
         }
-        Pointer pointer = pointersState.get(pointerIndex);
-        pointer.setPoint(point);
-        pointer.setPressure(pressure);
 
-        int source;
-        boolean activeSecondaryButtons = ((actionButton | buttons) & ~MotionEvent.BUTTON_PRIMARY) != 0;
-        if (pointerId == POINTER_ID_MOUSE && (action == MotionEvent.ACTION_HOVER_MOVE || activeSecondaryButtons)) {
-            // real mouse event, or event incompatible with a finger
-            pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_MOUSE;
-            source = InputDevice.SOURCE_MOUSE;
-            pointer.setUp(buttons == 0);
+        val source = if (isMouseEvent(pointerId, action, buttons)) {
+            pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_MOUSE
+            InputDevice.SOURCE_MOUSE.also { pointer.up = buttons == 0 }
         } else {
-            // POINTER_ID_GENERIC_FINGER, POINTER_ID_VIRTUAL_FINGER or real touch from device
-            pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_FINGER;
-            source = InputDevice.SOURCE_TOUCHSCREEN;
-            // Buttons must not be set for touch events
-            buttons = 0;
-            pointer.setUp(action == MotionEvent.ACTION_UP);
+            pointerProperties[pointerIndex].toolType = MotionEvent.TOOL_TYPE_FINGER
+            InputDevice.SOURCE_TOUCHSCREEN.also { pointer.up = action == MotionEvent.ACTION_UP }
         }
 
-        int pointerCount = pointersState.update(pointerProperties, pointerCoords);
-        if (pointerCount == 1) {
-            if (action == MotionEvent.ACTION_DOWN) {
-                lastTouchDown = now;
-            }
+        val pointerCount = pointersState.update(pointerProperties, pointerCoords)
+        val finalAction = adjustAction(pointerCount, action, pointerIndex)
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && source == InputDevice.SOURCE_MOUSE) {
+            handleMouseEvents(now, finalAction, pointerCount, actionButton, buttons, source)
         } else {
-            // secondary pointers must use ACTION_POINTER_* ORed with the pointerIndex
-            if (action == MotionEvent.ACTION_UP) {
-                action = MotionEvent.ACTION_POINTER_UP | (pointerIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
-            } else if (action == MotionEvent.ACTION_DOWN) {
-                action = MotionEvent.ACTION_POINTER_DOWN | (pointerIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
-            }
+            injectMotionEvent(now, finalAction, pointerCount, buttons, source)
         }
-
-        /* If the input device is a mouse (on API >= 23):
-         *   - the first button pressed must first generate ACTION_DOWN;
-         *   - all button pressed (including the first one) must generate ACTION_BUTTON_PRESS;
-         *   - all button released (including the last one) must generate ACTION_BUTTON_RELEASE;
-         *   - the last button released must in addition generate ACTION_UP.
-         *
-         * Otherwise, Chrome does not work properly: <https://github.com/Genymobile/scrcpy/issues/3635>
-         */
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && source == InputDevice.SOURCE_MOUSE) {
-            if (action == MotionEvent.ACTION_DOWN) {
-                if (actionButton == buttons) {
-                    // First button pressed: ACTION_DOWN
-                    MotionEvent downEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_DOWN, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
-                    if (!injectInputEvent(downEvent, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) {
-                        return false;
-                    }
-                }
-
-                // Any button pressed: ACTION_BUTTON_PRESS
-                MotionEvent pressEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_PRESS, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
-                if (!setActionButton(pressEvent, actionButton)) {
-                    return false;
-                }
-                if (!injectInputEvent(pressEvent, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) {
-                    return false;
-                }
-
-                return true;
-            }
-
-            if (action == MotionEvent.ACTION_UP) {
-                // Any button released: ACTION_BUTTON_RELEASE
-                MotionEvent releaseEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_BUTTON_RELEASE, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
-                if (!setActionButton(releaseEvent, actionButton)) {
-                    return false;
-                }
-                if (!injectInputEvent(releaseEvent, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) {
-                    return false;
-                }
-
-                if (buttons == 0) {
-                    // Last button released: ACTION_UP
-                    MotionEvent upEvent = MotionEvent.obtain(lastTouchDown, now, MotionEvent.ACTION_UP, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
-                    if (!injectInputEvent(upEvent, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-        }
-
-        MotionEvent event = MotionEvent.obtain(lastTouchDown, now, action, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0);
-        return injectInputEvent(event, targetDisplayId, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
     }
 
-    public Point mapToScreen(@NonNull Position position) {
-        int x = ScreenUtils.getScreenWidth() * position.getPoint().getX() / position.getScreenSize().getWidth();
-        int y = ScreenUtils.getScreenHeight() * position.getPoint().getY() / position.getScreenSize().getHeight();
-        return new Point(x, y);
+    private fun isMouseEvent(pointerId: Int, action: Int, buttons: Int) =
+        pointerId == POINTER_ID_MOUSE && (action == MotionEvent.ACTION_HOVER_MOVE || buttons and MotionEvent.BUTTON_PRIMARY.inv() != 0)
+
+    private fun adjustAction(pointerCount: Int, action: Int, pointerIndex: Int): Int {
+        return when {
+            pointerCount == 1 && action == MotionEvent.ACTION_DOWN -> {
+                lastTouchDown = SystemClock.uptimeMillis()
+                action
+            }
+
+            action == MotionEvent.ACTION_UP -> MotionEvent.ACTION_POINTER_UP or (pointerIndex shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)
+            action == MotionEvent.ACTION_DOWN -> MotionEvent.ACTION_POINTER_DOWN or (pointerIndex shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)
+            else -> action
+        }
     }
 
-    private static Method getSetActionButtonMethod() throws NoSuchMethodException {
-        if (setActionButtonMethod == null) {
-            setActionButtonMethod = MotionEvent.class.getMethod("setActionButton", int.class);
+    private fun handleMouseEvents(now: Long, action: Int, pointerCount: Int, actionButton: Int, buttons: Int, source: Int): Boolean {
+        if (action == MotionEvent.ACTION_DOWN && actionButton == buttons) {
+            val downEvent = createMotionEvent(now, MotionEvent.ACTION_DOWN, pointerCount, buttons, source)
+            if (!injectInputEvent(downEvent, 0, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) return false
         }
-        return setActionButtonMethod;
+
+        val pressEvent = createMotionEvent(now, MotionEvent.ACTION_BUTTON_PRESS, pointerCount, buttons, source)
+        if (!setActionButton(pressEvent, actionButton) || !injectInputEvent(pressEvent, 0, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) return false
+
+        if (action == MotionEvent.ACTION_UP) {
+            val releaseEvent = createMotionEvent(now, MotionEvent.ACTION_BUTTON_RELEASE, pointerCount, buttons, source)
+            if (!setActionButton(releaseEvent, actionButton) || !injectInputEvent(releaseEvent, 0, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) return false
+            if (buttons == 0) {
+                val upEvent = createMotionEvent(now, MotionEvent.ACTION_UP, pointerCount, buttons, source)
+                if (!injectInputEvent(upEvent, 0, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)) return false
+            }
+        }
+        return true
     }
 
-    public static boolean setActionButton(MotionEvent motionEvent, int actionButton) {
-        try {
-            Method method = getSetActionButtonMethod();
-            method.invoke(motionEvent, actionButton);
-            return true;
-        } catch (ReflectiveOperationException e) {
-            // Cannot set action button on MotionEvent
-            return false;
-        }
+    private fun injectMotionEvent(now: Long, action: Int, pointerCount: Int, buttons: Int, source: Int): Boolean {
+        val event = createMotionEvent(now, action, pointerCount, buttons, source)
+        return injectInputEvent(event, 0, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)
+    }
+
+    private fun createMotionEvent(now: Long, action: Int, pointerCount: Int, buttons: Int, source: Int): MotionEvent {
+        return MotionEvent.obtain(lastTouchDown, now, action, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0)
+    }
+
+    fun mapToScreen(@NonNull position: Position): Point {
+        val x = ScreenUtils.getScreenWidth() * position.point.x / position.screenSize.width
+        val y = ScreenUtils.getScreenHeight() * position.point.y / position.screenSize.height
+        return Point(x, y)
     }
 }

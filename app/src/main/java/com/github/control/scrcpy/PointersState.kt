@@ -1,103 +1,41 @@
-package com.github.control.scrcpy;
+package com.github.control.scrcpy
 
-import android.view.MotionEvent;
+import android.view.MotionEvent
 
-import java.util.ArrayList;
-import java.util.List;
+class PointersState {
 
-public class PointersState {
+    companion object {
+        const val MAX_POINTERS = 10
+    }
 
-    public static final int MAX_POINTERS = 10;
+    private val pointers = mutableListOf<Pointer>()
 
-    private final List<Pointer> pointers = new ArrayList<>();
+    private fun indexOf(id: Int) = pointers.indexOfFirst { it.id == id }
 
-    private int indexOf(long id) {
-        for (int i = 0; i < pointers.size(); ++i) {
-            Pointer pointer = pointers.get(i);
-            if (pointer.getId() == id) {
-                return i;
+    private fun nextUnusedLocalId() = (0 until MAX_POINTERS).firstOrNull { id -> pointers.none { it.localId == id } } ?: -1
+
+    operator fun get(index: Int) = pointers[index]
+
+    fun getPointerIndex(id: Int): Int {
+        indexOf(id).takeIf { it != -1 }
+            ?.let { return it }
+        if (pointers.size >= MAX_POINTERS) return -1
+
+        val localId = nextUnusedLocalId().takeIf { it != -1 } ?: error("No available local ID")
+        pointers.add(Pointer(id, localId))
+        return pointers.lastIndex
+    }
+
+    fun update(props: Array<MotionEvent.PointerProperties>, coords: Array<MotionEvent.PointerCoords>): Int {
+        pointers.forEachIndexed { i, pointer ->
+            props[i].id = pointer.localId
+            coords[i].apply {
+                x = pointer.point!!.x.toFloat()
+                y = pointer.point!!.y.toFloat()
+                pressure = pointer.pressure
             }
         }
-        return -1;
-    }
-
-    private boolean isLocalIdAvailable(int localId) {
-        for (int i = 0; i < pointers.size(); ++i) {
-            Pointer pointer = pointers.get(i);
-            if (pointer.getLocalId() == localId) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private int nextUnusedLocalId() {
-        for (int localId = 0; localId < MAX_POINTERS; ++localId) {
-            if (isLocalIdAvailable(localId)) {
-                return localId;
-            }
-        }
-        return -1;
-    }
-
-    public Pointer get(int index) {
-        return pointers.get(index);
-    }
-
-    public int getPointerIndex(long id) {
-        int index = indexOf(id);
-        if (index != -1) {
-            // already exists, return it
-            return index;
-        }
-        if (pointers.size() >= MAX_POINTERS) {
-            // it's full
-            return -1;
-        }
-        // id 0 is reserved for mouse events
-        int localId = nextUnusedLocalId();
-        if (localId == -1) {
-            throw new AssertionError("pointers.size() < maxFingers implies that a local id is available");
-        }
-        Pointer pointer = new Pointer(id, localId);
-        pointers.add(pointer);
-        // return the index of the pointer
-        return pointers.size() - 1;
-    }
-
-    /**
-     * Initialize the motion event parameters.
-     *
-     * @param props  the pointer properties
-     * @param coords the pointer coordinates
-     * @return The number of items initialized (the number of pointers).
-     */
-    public int update(MotionEvent.PointerProperties[] props, MotionEvent.PointerCoords[] coords) {
-        int count = pointers.size();
-        for (int i = 0; i < count; ++i) {
-            Pointer pointer = pointers.get(i);
-
-            // id 0 is reserved for mouse events
-            props[i].id = pointer.getLocalId();
-
-            Point point = pointer.getPoint();
-            coords[i].x = point.getX();
-            coords[i].y = point.getY();
-            coords[i].pressure = pointer.getPressure();
-        }
-        cleanUp();
-        return count;
-    }
-
-    /**
-     * Remove all pointers which are UP.
-     */
-    private void cleanUp() {
-        for (int i = pointers.size() - 1; i >= 0; --i) {
-            Pointer pointer = pointers.get(i);
-            if (pointer.isUp()) {
-                pointers.remove(i);
-            }
-        }
+        pointers.removeAll { it.up }
+        return pointers.size
     }
 }
