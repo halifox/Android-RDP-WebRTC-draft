@@ -1,7 +1,6 @@
 package com.github.control.ui
 
 import android.content.Context
-import android.content.Intent
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.util.Log
@@ -112,7 +111,7 @@ private fun resolveAndStartService(
     val serviceHost = serviceInfo.host
     val isResolve = serviceHost != null
     if (isResolve) {
-        startPullScreen(context, serviceHost.hostName)
+        ScreenPullActivity.start(context, serviceHost.hostName)
     } else {
         nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
             override fun onResolveFailed(serviceInfo: NsdServiceInfo?, errorCode: Int) {
@@ -124,15 +123,9 @@ private fun resolveAndStartService(
                 val serviceHost = serviceInfo.host
                 val isResolve = serviceHost != null
                 if (isResolve) {
-                    startPullScreen(context, serviceHost.hostName)
+                    ScreenPullActivity.start(context, serviceHost.hostName)
                 }
             }
         })
     }
-}
-
-private fun startPullScreen(context: Context, host: String) {
-    val starter = Intent(context, ScreenPullActivity::class.java)
-        .putExtra("host", host)
-    context.startActivity(starter)
 }
