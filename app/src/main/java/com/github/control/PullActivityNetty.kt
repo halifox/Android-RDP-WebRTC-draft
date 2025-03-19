@@ -23,11 +23,9 @@ import kotlinx.coroutines.channels.Channel
 
 
 class PullActivityNetty : AppCompatActivity() {
-    private val context = this
     private lateinit var binding: ActivityPullTcpBinding
 
     private val eventLoopGroup = NioEventLoopGroup()
-    private val eventLoopGroup2 = NioEventLoopGroup()
     private val inetHost by lazy { intent.getStringExtra("host") }
 
 
@@ -40,7 +38,7 @@ class PullActivityNetty : AppCompatActivity() {
 
         binding.SurfaceView.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
-                val mediaFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 1280, 800)
+                val mediaFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 1080, 2400)
                 decoder = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
                     .apply {
                         configure(mediaFormat, holder.surface, null, 0)
@@ -96,7 +94,6 @@ class PullActivityNetty : AppCompatActivity() {
                             override fun channelActive(ctx: ChannelHandlerContext) {
                             }
 
-                            //信道不活跃消息
                             override fun channelInactive(ctx: ChannelHandlerContext?) {
                             }
 
@@ -146,10 +143,8 @@ class PullActivityNetty : AppCompatActivity() {
     }
 
 
-
     override fun onDestroy() {
         super.onDestroy()
         eventLoopGroup.shutdownGracefully()
-        eventLoopGroup2.shutdownGracefully()
     }
 }

@@ -15,7 +15,7 @@ enum class TypeMode {
     TCP_IMAGE
 }
 
-val typeMode = TypeMode.TCP_IMAGE
+val typeMode = TypeMode.TCP
 
 fun getPullActivity(): Class<out AppCompatActivity> {
     return when (typeMode) {
