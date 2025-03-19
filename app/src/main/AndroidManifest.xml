@@ -2,30 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-feature
-        android:name="android.hardware.camera"
-        android:required="false" />
-
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
     <application
         android:name=".APP"
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:enableOnBackInvokedCallback="true"
-        android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
         android:theme="@style/Theme.Control"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
@@ -41,29 +24,12 @@
         <activity
             android:name=".ScreenPullActivity"
             android:exported="true" />
-        <activity
-            android:name=".PullActivityNetty"
-            android:exported="true" />
-        <activity
-            android:name=".PullActivityNettyImage"
-            android:exported="true" />
 
         <service
             android:name=".ScreenCaptureService"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="mediaProjection" />
-        <service
-            android:name=".ScreenCaptureServiceNetty"
-            android:enabled="true"
-            android:exported="true"
-            android:foregroundServiceType="mediaProjection" />
-        <service
-            android:name=".ScreenCaptureServiceNettyImage"
-            android:enabled="true"
-            android:exported="true"
-            android:foregroundServiceType="mediaProjection" />
-
         <service
             android:name=".MyAccessibilityService"
             android:enabled="true"
