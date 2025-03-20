@@ -1,4 +1,6 @@
-package com.github.control.scrcpy
+package com.github.control.gesture
+
+import android.graphics.Point
 
 data class Pointer(
     var id: Int,

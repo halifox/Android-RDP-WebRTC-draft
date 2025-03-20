@@ -66,13 +66,13 @@ class ScreenPullActivity : AppCompatActivity() {
         }
 
         binding.back.setOnClickListener {
-            eventChannel.trySend(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_BACK))
+            eventChannel.trySend(ActionEvent(AccessibilityService.GLOBAL_ACTION_BACK))
         }
         binding.home.setOnClickListener {
-            eventChannel.trySend(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_HOME))
+            eventChannel.trySend(ActionEvent(AccessibilityService.GLOBAL_ACTION_HOME))
         }
         binding.recents.setOnClickListener {
-            eventChannel.trySend(GlobalActionEvent(AccessibilityService.GLOBAL_ACTION_RECENTS))
+            eventChannel.trySend(ActionEvent(AccessibilityService.GLOBAL_ACTION_RECENTS))
         }
     }
 

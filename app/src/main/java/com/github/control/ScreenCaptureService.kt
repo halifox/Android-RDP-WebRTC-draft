@@ -15,7 +15,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleService
 import com.blankj.utilcode.util.ScreenUtils
 import com.blankj.utilcode.util.ServiceUtils
-import com.github.control.scrcpy.Controller
+import com.github.control.gesture.GestureInputController
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -60,7 +60,7 @@ class ScreenCaptureService : LifecycleService() {
     }
 
     private val context = this
-    private val controller by inject<Controller>()
+    private val gestureInputController by inject<GestureInputController>()
 
     private val eglBase = EglBase.create()
     private val eglBaseContext = eglBase.getEglBaseContext()
@@ -135,7 +135,7 @@ class ScreenCaptureService : LifecycleService() {
                         .addLast(LengthFieldPrepender(4))
                         .addLast(ByteArrayDecoder())
                         .addLast(ByteArrayEncoder())
-                        .addLast(ControlInboundHandler(controller = controller))
+                        .addLast(ControlInboundHandler(gestureInputController = gestureInputController))
                         .addLast(PeerConnectionInboundHandler(peerConnectionFactory, videoTrack, isOffer = true))
                 }
             })

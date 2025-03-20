@@ -1,16 +1,20 @@
-package com.github.control.scrcpy
+package com.github.control.gesture
 
+import android.graphics.Point
 import android.hardware.input.InputManager
 import android.os.Build
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
-import androidx.annotation.NonNull
 import com.blankj.utilcode.util.ScreenUtils
-import com.github.control.gesture.GestureEventController
 import java.lang.reflect.Method
 
-class Controller(val controllerDelegate: GestureEventController) {
+/**
+ * 处理手势输入并将其转化为适当的事件进行注入。
+ */
+class GestureInputController(
+    val controller: GestureEventController,
+) {
     private var lastTouchDown: Long = 0
     private val pointersState = PointersState()
     private val pointerProperties = Array(PointersState.MAX_POINTERS) {
@@ -49,11 +53,11 @@ class Controller(val controllerDelegate: GestureEventController) {
 
 
     fun injectInputEvent(event: MotionEvent, displayId: Int, injectMode: Int): Boolean {
-        return controllerDelegate.performInputEvent(event)
+        return controller.performInputEvent(event)
     }
 
     fun injectGlobalAction(action: Int): Boolean {
-        return controllerDelegate.performGlobalAction(action)
+        return controller.performGlobalAction(action)
     }
 
     fun injectTouch(action: Int, pointerId: Int, position: Position, pressure: Float, actionButton: Int, buttons: Int): Boolean {
@@ -130,7 +134,7 @@ class Controller(val controllerDelegate: GestureEventController) {
         return MotionEvent.obtain(lastTouchDown, now, action, pointerCount, pointerProperties, pointerCoords, 0, buttons, 1f, 1f, DEFAULT_DEVICE_ID, 0, source, 0)
     }
 
-    fun mapToScreen(@NonNull position: Position): Point {
+    fun mapToScreen(position: Position): Point {
         val x = ScreenUtils.getScreenWidth() * position.point.x / position.screenSize.width
         val y = ScreenUtils.getScreenHeight() * position.point.y / position.screenSize.height
         return Point(x, y)

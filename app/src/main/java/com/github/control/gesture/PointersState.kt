@@ -1,4 +1,4 @@
-package com.github.control.scrcpy
+package com.github.control.gesture
 
 import android.view.MotionEvent
 

@@ -5,7 +5,7 @@ import android.media.projection.MediaProjectionManager
 import android.net.nsd.NsdManager
 import androidx.core.content.ContextCompat
 import com.github.control.gesture.GestureServiceDelegate
-import com.github.control.scrcpy.Controller
+import com.github.control.gesture.GestureInputController
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -28,7 +28,7 @@ class APP : Application() {
             modules(module {
                 single { ContextCompat.getSystemService(get(), NsdManager::class.java) }
                 single { ContextCompat.getSystemService(get(), MediaProjectionManager::class.java) }
-                singleOf(::Controller)
+                singleOf(::GestureInputController)
                 singleOf(::GestureServiceDelegate)
             })
         }

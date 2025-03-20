@@ -1,11 +1,11 @@
 package com.github.control
 
-import android.util.Log
+import android.graphics.Point
+import android.util.Size
+import android.view.KeyEvent
 import android.view.MotionEvent
-import com.github.control.scrcpy.Controller
-import com.github.control.scrcpy.Point
-import com.github.control.scrcpy.Position
-import com.github.control.scrcpy.Size
+import com.github.control.gesture.GestureInputController
+import com.github.control.gesture.Position
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.PooledByteBufAllocator
 import io.netty.channel.ChannelHandlerContext
@@ -24,10 +24,11 @@ import kotlinx.coroutines.flow.onEach
 
 sealed class Event
 class TouchEvent(val event: MotionEvent, val screenWidth: Int, val screenHeight: Int) : Event()
-class GlobalActionEvent(val action: Int) : Event()
+class KeyBoardEvent(val event: KeyEvent) : Event()
+class ActionEvent(val action: Int) : Event()
 
 class ControlInboundHandler(
-    private val controller: Controller? = null,
+    private val gestureInputController: GestureInputController? = null,
     private val eventChannel: Channel<Event>? = null
 
 ) : SimpleChannelInboundHandler<ByteArray>() {
@@ -67,8 +68,9 @@ class ControlInboundHandler(
                 .consumeAsFlow()
                 .onEach {
                     when (it) {
-                        is GlobalActionEvent -> sendGlobalActionEvent(ctx, it.action)
+                        is ActionEvent -> sendGlobalActionEvent(ctx, it.action)
                         is TouchEvent -> sendTouchEvent(ctx, it.event, it.screenWidth, it.screenHeight)
+                        is KeyBoardEvent -> {}
                     }
                 }
                 .flowOn(Dispatchers.IO)
@@ -114,7 +116,7 @@ class ControlInboundHandler(
         val actionButton = byteBuf.readInt()
         val buttons = byteBuf.readInt()
         val position = Position(Point(x, y), Size(screenWidth, screenHeight))
-        controller?.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
+        gestureInputController?.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
     }
 
     private fun sendGlobalActionEvent(ctx: ChannelHandlerContext, action: Int) {
@@ -126,7 +128,7 @@ class ControlInboundHandler(
 
     private fun readGlobalActionEvent(byteBuf: ByteBuf) {
         val action = byteBuf.readInt()
-        controller?.injectGlobalAction(action)
+        gestureInputController?.injectGlobalAction(action)
     }
 
 }
