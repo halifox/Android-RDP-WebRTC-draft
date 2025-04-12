@@ -41,7 +41,7 @@
 * **WebRTC 实现:** 基于 Android WebRTC SDK 实现音视频引擎和数据通道。
 * **权限:** 应用需要录屏和网络权限。
 
-![](signalingflow.png)
+![](signalingflow.webp)
 
 ## 注意事项
 
