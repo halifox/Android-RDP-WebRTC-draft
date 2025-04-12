@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.blankj.utilcode.util.ThreadUtils
@@ -14,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.webrtc.DataChannel
 import org.webrtc.EglBase
 import org.webrtc.HardwareVideoDecoderFactory
 import org.webrtc.HardwareVideoEncoderFactory
@@ -23,6 +25,7 @@ import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.RtpReceiver
+import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.VideoTrack
 import java.io.DataInputStream
@@ -72,7 +75,7 @@ class ScreenCaptureActivity : AppCompatActivity() {
 
     private fun createPeerConnection() {
 
-        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : EmptyPeerConnectionObserver() {
+        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
             override fun onAddTrack(rtpReceiver: RtpReceiver, mediaStreams: Array<out MediaStream>) {
                 val track = rtpReceiver.track()
                 if (track is VideoTrack) {
@@ -80,8 +83,44 @@ class ScreenCaptureActivity : AppCompatActivity() {
                 }
             }
 
+            override fun onSignalingChange(p0: PeerConnection.SignalingState?) {
+
+            }
+
+            override fun onIceConnectionChange(p0: PeerConnection.IceConnectionState?) {
+
+            }
+
+            override fun onIceConnectionReceivingChange(p0: Boolean) {
+
+            }
+
+            override fun onIceGatheringChange(p0: PeerConnection.IceGatheringState?) {
+
+            }
+
             override fun onIceCandidate(iceCandidate: IceCandidate) {
                 sendIceCandidate(outputStream, iceCandidate)
+            }
+
+            override fun onIceCandidatesRemoved(p0: Array<out IceCandidate?>?) {
+
+            }
+
+            override fun onAddStream(p0: MediaStream?) {
+
+            }
+
+            override fun onRemoveStream(p0: MediaStream?) {
+
+            }
+
+            override fun onDataChannel(p0: DataChannel?) {
+
+            }
+
+            override fun onRenegotiationNeeded() {
+
             }
         })!!
     }
@@ -95,12 +134,7 @@ class ScreenCaptureActivity : AppCompatActivity() {
                         ICE_CANDIDATE -> receiveIceCandidate(inputStream, peerConnection)
                         SESSION_DESCRIPTION -> {
                             receiveSessionDescription(inputStream, peerConnection)
-                            peerConnection.createAnswer(object : EmptySdpObserver() {
-                                override fun onCreateSuccess(description: SessionDescription) {
-                                    peerConnection.setLocalDescription(EmptySdpObserver(), description)
-                                    sendSessionDescription(outputStream, description)
-                                }
-                            }, MediaConstraints())
+                            createAnswer()
                         }
 
                         CONFIGURATION_CHANGED -> {
@@ -115,6 +149,43 @@ class ScreenCaptureActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun createAnswer() {
+        peerConnection.createAnswer(object : SdpObserver {
+            override fun onCreateSuccess(description: SessionDescription) {
+                peerConnection.setLocalDescription(object : SdpObserver {
+                    override fun onCreateSuccess(sdp: SessionDescription) {
+
+                    }
+
+                    override fun onSetSuccess() {
+
+                    }
+
+                    override fun onCreateFailure(error: String) {
+
+                    }
+
+                    override fun onSetFailure(error: String) {
+
+                    }
+                }, description)
+                sendSessionDescription(outputStream, description)
+            }
+
+            override fun onSetSuccess() {
+
+            }
+
+            override fun onCreateFailure(error: String) {
+
+            }
+
+            override fun onSetFailure(error: String) {
+
+            }
+        }, MediaConstraints())
     }
 
     private val executorService = ThreadUtils.getSinglePool()

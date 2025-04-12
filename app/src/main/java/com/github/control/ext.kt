@@ -8,11 +8,8 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import com.blankj.utilcode.util.ScreenUtils
 import com.blankj.utilcode.util.ThreadUtils
 import com.github.control.gesture.Controller
-import org.webrtc.DataChannel
 import org.webrtc.IceCandidate
-import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
-import org.webrtc.RtpReceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceViewRenderer
@@ -102,7 +99,23 @@ fun receiveSessionDescription(inputStream: DataInputStream, peerConnection: Peer
     val type = inputStream.readUTF()
     val description = inputStream.readUTF()
     val sdp = SessionDescription(SessionDescription.Type.valueOf(type), description)
-    peerConnection.setRemoteDescription(EmptySdpObserver(), sdp)
+    peerConnection.setRemoteDescription(object : SdpObserver {
+        override fun onCreateSuccess(sdp: SessionDescription) {
+
+        }
+
+        override fun onSetSuccess() {
+
+        }
+
+        override fun onCreateFailure(error: String) {
+
+        }
+
+        override fun onSetFailure(error: String) {
+
+        }
+    }, sdp)
 }
 
 fun sendConfigurationChanged(outputStream: DataOutputStream) {
@@ -120,67 +133,4 @@ fun receiveConfigurationChanged(inputStream: DataInputStream, renderer: SurfaceV
             dimensionRatio = "${screenWidth}:${screenHeight}"
         }
     }
-}
-
-
-open class EmptySdpObserver : SdpObserver {
-
-    override fun onSetFailure(str: String) {
-    }
-
-    override fun onSetSuccess() {
-    }
-
-    override fun onCreateSuccess(description: SessionDescription) {
-    }
-
-    override fun onCreateFailure(str: String) {
-    }
-}
-
-open class EmptyPeerConnectionObserver : PeerConnection.Observer {
-    override fun onSignalingChange(state: PeerConnection.SignalingState) {
-
-    }
-
-    override fun onIceConnectionChange(state: PeerConnection.IceConnectionState) {
-
-    }
-
-    override fun onIceConnectionReceivingChange(b: Boolean) {
-
-    }
-
-    override fun onIceGatheringChange(state: PeerConnection.IceGatheringState) {
-
-    }
-
-    override fun onIceCandidate(iceCandidate: IceCandidate) {
-
-    }
-
-    override fun onIceCandidatesRemoved(mediaStreams: Array<out IceCandidate>) {
-
-    }
-
-    override fun onAddStream(mediaStream: MediaStream) {
-
-    }
-
-    override fun onRemoveStream(mediaStream: MediaStream) {
-
-    }
-
-    override fun onDataChannel(dataChannel: DataChannel) {
-
-    }
-
-    override fun onRenegotiationNeeded() {
-
-    }
-
-    override fun onAddTrack(rtpReceiver: RtpReceiver, mediaStreams: Array<out MediaStream>) {
-
-    }
-
 }

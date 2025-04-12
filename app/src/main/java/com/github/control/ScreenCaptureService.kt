@@ -25,14 +25,17 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.android.ext.android.inject
+import org.webrtc.DataChannel
 import org.webrtc.EglBase
 import org.webrtc.HardwareVideoDecoderFactory
 import org.webrtc.HardwareVideoEncoderFactory
 import org.webrtc.IceCandidate
 import org.webrtc.MediaConstraints
+import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.ScreenCapturerAndroid
+import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceTextureHelper
 import java.io.DataInputStream
@@ -134,16 +137,80 @@ class ScreenCaptureService : LifecycleService() {
 
 
     private fun createPeerConnection() {
-        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : EmptyPeerConnectionObserver() {
+        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
+            override fun onSignalingChange(p0: PeerConnection.SignalingState?) {
+
+            }
+
+            override fun onIceConnectionChange(p0: PeerConnection.IceConnectionState?) {
+
+            }
+
+            override fun onIceConnectionReceivingChange(p0: Boolean) {
+
+            }
+
+            override fun onIceGatheringChange(p0: PeerConnection.IceGatheringState?) {
+
+            }
+
             override fun onIceCandidate(iceCandidate: IceCandidate) {
                 sendIceCandidate(outputStream, iceCandidate)
             }
+
+            override fun onIceCandidatesRemoved(p0: Array<out IceCandidate?>?) {
+
+            }
+
+            override fun onAddStream(p0: MediaStream?) {
+
+            }
+
+            override fun onRemoveStream(p0: MediaStream?) {
+
+            }
+
+            override fun onDataChannel(p0: DataChannel?) {
+
+            }
+
+            override fun onRenegotiationNeeded() {
+
+            }
         })!!
         peerConnection.addTrack(videoTrack)
-        peerConnection.createOffer(object : EmptySdpObserver() {
+        peerConnection.createOffer(object : SdpObserver {
             override fun onCreateSuccess(description: SessionDescription) {
-                peerConnection.setLocalDescription(EmptySdpObserver(), description)
+                peerConnection.setLocalDescription(object : SdpObserver {
+                    override fun onCreateSuccess(sdp: SessionDescription) {
+
+                    }
+
+                    override fun onSetSuccess() {
+
+                    }
+
+                    override fun onCreateFailure(error: String) {
+
+                    }
+
+                    override fun onSetFailure(error: String) {
+
+                    }
+                }, description)
                 sendSessionDescription(outputStream, description)
+            }
+
+            override fun onSetSuccess() {
+
+            }
+
+            override fun onCreateFailure(error: String) {
+
+            }
+
+            override fun onSetFailure(error: String) {
+
             }
         }, MediaConstraints())
     }
