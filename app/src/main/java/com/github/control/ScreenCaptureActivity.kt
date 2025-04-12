@@ -8,7 +8,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.blankj.utilcode.util.ToastUtils
-import com.github.control.databinding.ActivityPullBinding
+import com.github.control.databinding.ActivityScreenCaptureBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -31,15 +31,13 @@ import java.net.Socket
 @SuppressLint("ClickableViewAccessibility")
 class ScreenCaptureActivity : AppCompatActivity() {
     private val context = this
-    private lateinit var binding: ActivityPullBinding
-
+    private lateinit var binding: ActivityScreenCaptureBinding
     private val host by lazy { intent.getStringExtra("host") }
     private val port by lazy { intent.getIntExtra("port", 40000) }
     private lateinit var peerConnection: PeerConnection
     private lateinit var socket: Socket
     private lateinit var inputStream: DataInputStream
     private lateinit var outputStream: DataOutputStream
-
     private val eglBase = EglBase.create()
     private val eglBaseContext = eglBase.getEglBaseContext()
     private val peerConnectionFactory = PeerConnectionFactory.builder()
@@ -51,15 +49,15 @@ class ScreenCaptureActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityPullBinding.inflate(layoutInflater)
+        binding = ActivityScreenCaptureBinding.inflate(layoutInflater)
         setContentView(binding.root)
         initView()
         lifecycleScope.launch(Dispatchers.IO) {
             socket = Socket(host, port)
             inputStream = DataInputStream(socket.inputStream)
             outputStream = DataOutputStream(socket.outputStream)
-            createPeerConnection()
             startReadThread()
+            createPeerConnection()
         }
     }
 

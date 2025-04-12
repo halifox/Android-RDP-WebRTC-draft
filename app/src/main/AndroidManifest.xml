@@ -22,9 +22,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".ScreenCaptureActivity"
-            android:exported="true" />
+        <activity android:name="com.github.control.SlaveActivity" android:screenOrientation="portrait"/>
+        <activity android:name="com.github.control.MasterActivity" android:screenOrientation="portrait"/>
+        <activity android:name="com.github.control.ScreenCaptureActivity" android:screenOrientation="portrait"/>
 
         <service
             android:name=".ScreenCaptureService"

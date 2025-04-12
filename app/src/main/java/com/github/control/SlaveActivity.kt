@@ -1,7 +1,10 @@
-package com.github.control.ui
+package com.github.control
 
 import android.media.projection.MediaProjectionManager
+import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Column
@@ -27,13 +30,20 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.github.control.gesture.GestureControlAccessibilityService
-import com.github.control.ScreenCaptureService
 import org.koin.compose.koinInject
 
+class SlaveActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            SlaveScreen()
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SlaveScreen() {
+private fun SlaveScreen() {
     val mediaProjectionManager = koinInject<MediaProjectionManager>()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
@@ -62,7 +72,7 @@ fun SlaveScreen() {
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(title = {
-                Text(text = "受控端")
+                Text(text = "受控端配置")
             })
         },
         content = { innerPadding ->

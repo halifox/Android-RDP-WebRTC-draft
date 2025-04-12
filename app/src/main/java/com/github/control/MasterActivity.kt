@@ -1,9 +1,12 @@
-package com.github.control.ui
+package com.github.control
 
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.Bundle
 import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -24,12 +27,23 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.github.control.ScreenCaptureActivity
+import androidx.core.os.bundleOf
+import com.blankj.utilcode.util.ActivityUtils
 import org.koin.compose.koinInject
+
+class MasterActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MasterScreen()
+        }
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MasterScreen() {
+private fun MasterScreen() {
     val nsdManager = koinInject<NsdManager>()
     val context = LocalContext.current
     var discovering by remember { mutableStateOf(false) }
