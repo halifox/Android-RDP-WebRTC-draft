@@ -1,7 +1,9 @@
 package com.github.control
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.projection.MediaProjection
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
@@ -15,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.blankj.utilcode.util.DeviceUtils
 import com.blankj.utilcode.util.ScreenUtils
 import com.blankj.utilcode.util.ServiceUtils
+import com.blankj.utilcode.util.ThreadUtils
 import com.blankj.utilcode.util.ToastUtils
 import com.github.control.gesture.Controller
 import kotlinx.coroutines.Dispatchers
@@ -85,12 +88,21 @@ class ScreenCaptureService : LifecycleService() {
     private lateinit var inputStream: DataInputStream
     private lateinit var outputStream: DataOutputStream
 
+    private val receiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            ThreadUtils.getSinglePool()
+                .submit {
+                    sendConfigurationChanged(outputStream)
+                }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate: ")
         startForegroundService()
         startNsdService()
+        registerReceiver(receiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED))
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -98,6 +110,7 @@ class ScreenCaptureService : LifecycleService() {
                 socket = serverSocket?.accept()
                 inputStream = DataInputStream(socket?.inputStream)
                 outputStream = DataOutputStream(socket?.outputStream)
+                sendConfigurationChanged(outputStream)
                 createPeerConnection()
                 startReadThread()
             } catch (e: Exception) {
@@ -111,6 +124,7 @@ class ScreenCaptureService : LifecycleService() {
         Log.d(TAG, "onDestroy: ")
         stopForegroundService()
         stopNsdService()
+        unregisterReceiver(receiver)
         eglBase.release()
         screenCapturerAndroid?.stopCapture()
         screenCapturerAndroid?.dispose()

@@ -4,6 +4,8 @@ import android.graphics.Point
 import android.util.Size
 import android.view.MotionEvent
 import android.view.View
+import androidx.constraintlayout.widget.ConstraintLayout
+import com.blankj.utilcode.util.ScreenUtils
 import com.blankj.utilcode.util.ThreadUtils
 import com.github.control.gesture.Controller
 import org.webrtc.DataChannel
@@ -13,6 +15,7 @@ import org.webrtc.PeerConnection
 import org.webrtc.RtpReceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
+import org.webrtc.SurfaceViewRenderer
 import java.io.DataInputStream
 import java.io.DataOutputStream
 
@@ -20,6 +23,7 @@ const val ACTION_EVENT = 101
 const val TOUCH_EVENT = 102
 const val ICE_CANDIDATE = 201
 const val SESSION_DESCRIPTION = 202
+const val CONFIGURATION_CHANGED = 203
 
 fun sendGlobalActionEvent(outputStream: DataOutputStream, action: Int) {
     ThreadUtils.getSinglePool()
@@ -98,7 +102,6 @@ fun sendSessionDescription(outputStream: DataOutputStream, sessionDescription: S
     outputStream.writeUTF(sessionDescription.type.name)
     outputStream.writeUTF(sessionDescription.description)
     outputStream.flush()
-
 }
 
 fun receiveSessionDescription(inputStream: DataInputStream, peerConnection: PeerConnection) {
@@ -107,6 +110,24 @@ fun receiveSessionDescription(inputStream: DataInputStream, peerConnection: Peer
     val sdp = SessionDescription(SessionDescription.Type.valueOf(type), description)
     peerConnection.setRemoteDescription(EmptySdpObserver(), sdp)
 }
+
+fun sendConfigurationChanged(outputStream: DataOutputStream) {
+    outputStream.writeInt(CONFIGURATION_CHANGED)
+    outputStream.writeInt(ScreenUtils.getScreenWidth())
+    outputStream.writeInt(ScreenUtils.getScreenHeight())
+    outputStream.flush()
+}
+
+fun receiveConfigurationChanged(inputStream: DataInputStream, renderer: SurfaceViewRenderer) {
+    val screenWidth = inputStream.readInt()
+    val screenHeight = inputStream.readInt()
+    ThreadUtils.runOnUiThread {
+        renderer.layoutParams = (renderer.layoutParams as ConstraintLayout.LayoutParams).apply {
+            dimensionRatio = "${screenWidth}:${screenHeight}"
+        }
+    }
+}
+
 
 open class EmptySdpObserver : SdpObserver {
 

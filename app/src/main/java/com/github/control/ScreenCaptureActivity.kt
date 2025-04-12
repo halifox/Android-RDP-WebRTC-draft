@@ -101,10 +101,14 @@ class ScreenCaptureActivity : AppCompatActivity() {
                                 }
                             }, MediaConstraints())
                         }
+
+                        CONFIGURATION_CHANGED -> {
+                            receiveConfigurationChanged(inputStream,binding.renderer)
+                        }
                     }
                 }
             } catch (e: Exception) {
-                ToastUtils.showLong("对端关闭")
+//                ToastUtils.showLong("对端关闭")
                 withContext(Dispatchers.Main) {
                     finish()
                 }
