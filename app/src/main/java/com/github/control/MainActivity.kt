@@ -1,5 +1,6 @@
 package com.github.control
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,7 +15,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.blankj.utilcode.util.ActivityUtils
+import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,11 +29,12 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreen() {
+    val context = LocalContext.current
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(title = {
-                Text(text = "局域网桌面")
+                Text(text = "Remote Desktop Connection Software")
             })
         },
         content = { innerPadding ->
@@ -44,14 +46,14 @@ private fun MainScreen() {
             ) {
                 Button(
                     onClick = {
-                        ActivityUtils.startActivity(MasterActivity::class.java)
+                        context.startActivity(Intent(context, MasterActivity::class.java))
                     },
                 ) {
                     Text(text = "这是主控端")
                 }
                 Button(
                     onClick = {
-                        ActivityUtils.startActivity(SlaveActivity::class.java)
+                        context.startActivity(Intent(context, SlaveActivity::class.java))
                     },
                 ) {
                     Text(text = "这是受控端")

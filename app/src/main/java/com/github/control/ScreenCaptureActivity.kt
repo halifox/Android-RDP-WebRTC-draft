@@ -35,7 +35,7 @@ class ScreenCaptureActivity : AppCompatActivity() {
     private val host by lazy { intent.getStringExtra("host") }
     private val port by lazy { intent.getIntExtra("port", 40000) }
     private lateinit var peerConnection: PeerConnection
-    private lateinit var socket: Socket
+    private var socket: Socket? = null
     private lateinit var inputStream: DataInputStream
     private lateinit var outputStream: DataOutputStream
     private val eglBase = EglBase.create()
@@ -54,8 +54,8 @@ class ScreenCaptureActivity : AppCompatActivity() {
         initView()
         lifecycleScope.launch(Dispatchers.IO) {
             socket = Socket(host, port)
-            inputStream = DataInputStream(socket.inputStream)
-            outputStream = DataOutputStream(socket.outputStream)
+            inputStream = DataInputStream(socket!!.inputStream)
+            outputStream = DataOutputStream(socket!!.outputStream)
             startReadThread()
             createPeerConnection()
         }
@@ -63,9 +63,7 @@ class ScreenCaptureActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        inputStream.close()
-        outputStream.close()
-        socket.close()
+        socket?.close()
         eglBase.release()
         binding.renderer.clearImage()
         binding.renderer.release()

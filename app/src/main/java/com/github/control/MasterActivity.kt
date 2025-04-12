@@ -18,17 +18,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.os.bundleOf
-import com.blankj.utilcode.util.ActivityUtils
 import org.koin.compose.koinInject
 
 class MasterActivity : ComponentActivity() {
@@ -46,14 +40,12 @@ class MasterActivity : ComponentActivity() {
 private fun MasterScreen() {
     val nsdManager = koinInject<NsdManager>()
     val context = LocalContext.current
-    var discovering by remember { mutableStateOf(false) }
     val serviceList = remember { mutableStateListOf<NsdServiceInfo>() }
     DisposableEffect(Unit) {
         val discoveryListener = object : NsdManager.DiscoveryListener {
             private val TAG = "NsdManager"
             override fun onDiscoveryStarted(serviceType: String) {
                 Log.d(TAG, "onDiscoveryStarted: ")
-                discovering = true
             }
 
             override fun onServiceFound(serviceInfo: NsdServiceInfo) {
@@ -63,12 +55,13 @@ private fun MasterScreen() {
 
             override fun onServiceLost(serviceInfo: NsdServiceInfo) {
                 Log.d(TAG, "onServiceLost: ${serviceInfo}")
-                serviceList.remove(serviceInfo)
+                serviceList.removeIf {
+                    it.serviceName == serviceInfo.serviceName
+                }
             }
 
             override fun onDiscoveryStopped(serviceType: String) {
                 Log.d(TAG, "onDiscoveryStopped: ")
-                discovering = false
             }
 
             override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
@@ -102,9 +95,9 @@ private fun MasterScreen() {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(text = serviceInfo.toString(), modifier = Modifier.weight(1f))
+                    Text(text = serviceInfo.serviceName, modifier = Modifier.weight(1f))
                     Button(onClick = {
-                        resolveAndStartService(serviceInfo, context, nsdManager, serviceList, it)
+                        resolveAndStartService(serviceInfo, context, nsdManager)
                     }) {
                         Text(text = "连接")
                     }
@@ -114,31 +107,24 @@ private fun MasterScreen() {
     }
 }
 
-
+private val resolveServiceCache = mutableMapOf<String, NsdServiceInfo>()
 private fun resolveAndStartService(
     serviceInfo: NsdServiceInfo,
     context: Context,
     nsdManager: NsdManager,
-    serviceList: SnapshotStateList<NsdServiceInfo>,
-    it: Int
 ) {
-    val serviceHost = serviceInfo.host
-    val isResolve = serviceHost != null
-    if (isResolve) {
-        ScreenCaptureActivity.start(context, serviceHost.hostName, serviceInfo.port)
+    if (resolveServiceCache.contains(serviceInfo.serviceName)) {
+        val resolveServiceInfo = resolveServiceCache[serviceInfo.serviceName]!!
+        ScreenCaptureActivity.start(context, resolveServiceInfo.host.hostName, resolveServiceInfo.port)
     } else {
         nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
             override fun onResolveFailed(serviceInfo: NsdServiceInfo?, errorCode: Int) {
 
             }
 
-            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                serviceList[it] = serviceInfo
-                val serviceHost = serviceInfo.host
-                val isResolve = serviceHost != null
-                if (isResolve) {
-                    ScreenCaptureActivity.start(context, serviceHost.hostName, serviceInfo.port)
-                }
+            override fun onServiceResolved(resolveServiceInfo: NsdServiceInfo) {
+                resolveServiceCache[serviceInfo.serviceName] = resolveServiceInfo
+                ScreenCaptureActivity.start(context, resolveServiceInfo.host.hostName, resolveServiceInfo.port)
             }
         })
     }

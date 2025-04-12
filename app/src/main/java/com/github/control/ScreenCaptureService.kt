@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.blankj.utilcode.util.DeviceUtils
 import com.blankj.utilcode.util.ScreenUtils
 import com.blankj.utilcode.util.ServiceUtils
 import com.blankj.utilcode.util.ToastUtils
@@ -78,8 +79,9 @@ class ScreenCaptureService : LifecycleService() {
 
 
     private lateinit var peerConnection: PeerConnection
-    private lateinit var serverSocket: ServerSocket
-    private lateinit var socket: Socket
+    private var screenCapturerAndroid: ScreenCapturerAndroid? = null
+    private var serverSocket: ServerSocket? = null
+    private var socket: Socket? = null
     private lateinit var inputStream: DataInputStream
     private lateinit var outputStream: DataOutputStream
 
@@ -91,12 +93,16 @@ class ScreenCaptureService : LifecycleService() {
         startNsdService()
 
         lifecycleScope.launch(Dispatchers.IO) {
-            serverSocket = ServerSocket(40000)
-            socket = serverSocket.accept()
-            inputStream = DataInputStream(socket.inputStream)
-            outputStream = DataOutputStream(socket.outputStream)
-            createPeerConnection()
-            startReadThread()
+            try {
+                serverSocket = ServerSocket(40000)
+                socket = serverSocket?.accept()
+                inputStream = DataInputStream(socket?.inputStream)
+                outputStream = DataOutputStream(socket?.outputStream)
+                createPeerConnection()
+                startReadThread()
+            } catch (e: Exception) {
+                stopSelf()
+            }
         }
     }
 
@@ -108,10 +114,8 @@ class ScreenCaptureService : LifecycleService() {
         eglBase.release()
         screenCapturerAndroid?.stopCapture()
         screenCapturerAndroid?.dispose()
-        inputStream.close()
-        outputStream.close()
-        socket.close()
-        serverSocket.close()
+        serverSocket?.close()
+        socket?.close()
     }
 
 
@@ -162,7 +166,6 @@ class ScreenCaptureService : LifecycleService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
-    private var screenCapturerAndroid: ScreenCapturerAndroid? = null
     private fun initScreenCapturerAndroid(screenCaptureIntent: Intent) {
         screenCapturerAndroid = ScreenCapturerAndroid(screenCaptureIntent, object : MediaProjection.Callback() {
             override fun onStop() {
@@ -211,7 +214,7 @@ class ScreenCaptureService : LifecycleService() {
      */
     private val nsdManager by inject<NsdManager>()
     private val nsdServiceInfo = NsdServiceInfo().apply {
-        serviceName = "control"
+        serviceName = DeviceUtils.getModel()
         serviceType = "_control._tcp."
         port = 40000
     }
