@@ -93,28 +93,12 @@ class ScreenCaptureActivity : AppCompatActivity() {
             try {
                 while (isActive) {
                     val type = inputStream.readInt()
-                    Log.d(TAG, "type:${type} ")
                     when (type) {
                         201 -> receiveIceCandidate(inputStream, peerConnection)
                         202 -> {
                             receiveSessionDescription(inputStream, peerConnection)
                             peerConnection.createAnswer(object : EmptySdpObserver() {
-                                override fun onSetFailure(str: String) {
-                                    Log.d(TAG, "onSetFailure: ${str}")
-                                }
-
-                                override fun onSetSuccess() {
-                                    Log.d(TAG, "onSetSuccess:")
-
-                                }
-
-                                override fun onCreateFailure(str: String) {
-                                    Log.d(TAG, "onCreateFailure: ${str}")
-
-                                }
-
                                 override fun onCreateSuccess(description: SessionDescription) {
-                                    Log.d(TAG, "onCreateSuccess: ${description}")
                                     peerConnection.setLocalDescription(EmptySdpObserver(), description)
                                     sendSessionDescription(outputStream, description)
                                 }
@@ -131,8 +115,11 @@ class ScreenCaptureActivity : AppCompatActivity() {
     private fun initView() {
         binding.renderer.init(eglBaseContext, null)
         binding.renderer.setOnTouchListener { _, event ->
-            sendTouchEvent(outputStream, event, binding.renderer.width, binding.renderer.height)
+            sendTouchEvent(outputStream, event, binding.renderer)
             true
+        }
+        binding.renderer.post {
+            Log.d(TAG, "initView:${binding.renderer.x} ${binding.renderer.y} ${binding.renderer.width} ${binding.renderer.height}")
         }
         binding.back.setOnClickListener {
             sendGlobalActionEvent(outputStream, AccessibilityService.GLOBAL_ACTION_BACK)

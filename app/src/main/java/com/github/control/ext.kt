@@ -6,6 +6,7 @@ import android.os.HandlerThread
 import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
+import android.view.View
 import com.github.control.gesture.Controller
 import org.webrtc.DataChannel
 import org.webrtc.IceCandidate
@@ -23,7 +24,6 @@ val ht = HandlerThread("ext").apply {
 }
 val h = Handler(ht.looper)
 fun sendGlobalActionEvent(outputStream: DataOutputStream, action: Int) {
-    Log.d(TAG, "sendGlobalActionEvent: ")
     h.post {
         outputStream.writeInt(101)
         outputStream.writeInt(action)
@@ -32,22 +32,18 @@ fun sendGlobalActionEvent(outputStream: DataOutputStream, action: Int) {
 }
 
 fun receiveGlobalActionEvent(inputStream: DataInputStream, controller: Controller) {
-    Log.d(TAG, "receiveGlobalActionEvent: ")
     val action = inputStream.readInt()
     controller.injectGlobalAction(action)
 }
 
-fun sendTouchEvent(outputStream: DataOutputStream, event: MotionEvent, screenWidth: Int, screenHeight: Int) {
+fun sendTouchEvent(outputStream: DataOutputStream, event: MotionEvent, view: View) {
     h.post {
-        Log.d(TAG, "sendTouchEvent: ")
         val action = event.action
         val pointerId = event.getPointerId(event.actionIndex)
-        val x = event.getX(event.actionIndex)
-            .toInt()
-        val y = event.getY(event.actionIndex)
-            .toInt()
-        val screenWidth = screenWidth
-        val screenHeight = screenHeight
+        val x = (event.getX(event.actionIndex) - view.x).toInt()
+        val y = (event.getY(event.actionIndex) - view.y).toInt()
+        val screenWidth = view.width
+        val screenHeight = view.height
         val pressure = event.pressure
         val actionButton = event.actionButton
         val buttons = event.buttonState
@@ -67,7 +63,6 @@ fun sendTouchEvent(outputStream: DataOutputStream, event: MotionEvent, screenWid
 }
 
 fun receiveTouchEvent(inputStream: DataInputStream, controller: Controller) {
-    Log.d(TAG, "receiveTouchEvent: ")
     val action = inputStream.readInt()
     val pointerId = inputStream.readInt()
     val x = inputStream.readInt()
@@ -82,43 +77,35 @@ fun receiveTouchEvent(inputStream: DataInputStream, controller: Controller) {
 
 
 fun sendIceCandidate(outputStream: DataOutputStream, iceCandidate: IceCandidate) {
-    Log.d(TAG, "sendIceCandidate: ")
     outputStream.writeInt(201)
     outputStream.writeUTF(iceCandidate.sdpMid)
     outputStream.writeInt(iceCandidate.sdpMLineIndex)
     outputStream.writeUTF(iceCandidate.sdp)
     outputStream.flush()
-    Log.d(TAG, "sendIceCandidate:finish ")
 }
 
 fun receiveIceCandidate(inputStream: DataInputStream, peerConnection: PeerConnection) {
-    Log.d(TAG, "receiveIceCandidate: ")
     val sdpMid = inputStream.readUTF()
     val sdpMLineIndex = inputStream.readInt()
     val sdp = inputStream.readUTF()
     val ice = IceCandidate(sdpMid, sdpMLineIndex, sdp)
     peerConnection.addIceCandidate(ice)
-    Log.d(TAG, "receiveIceCandidate:finish ")
 
 }
 
 fun sendSessionDescription(outputStream: DataOutputStream, sessionDescription: SessionDescription) {
-    Log.d(TAG, "sendSessionDescription: ")
     outputStream.writeInt(202)
     outputStream.writeUTF(sessionDescription.type.name)
     outputStream.writeUTF(sessionDescription.description)
     outputStream.flush()
-    Log.d(TAG, "sendSessionDescription:finish ")
 
 }
 
 fun receiveSessionDescription(inputStream: DataInputStream, peerConnection: PeerConnection) {
-    Log.d(TAG, "receiveSessionDescription: ")
     val type = inputStream.readUTF()
     val description = inputStream.readUTF()
     val sdp = SessionDescription(SessionDescription.Type.valueOf(type), description)
     peerConnection.setRemoteDescription(EmptySdpObserver(), sdp)
-    Log.d(TAG, "receiveSessionDescription:finish ")
 }
 
 open class EmptySdpObserver : SdpObserver {

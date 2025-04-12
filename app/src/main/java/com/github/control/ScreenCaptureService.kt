@@ -134,7 +134,6 @@ class ScreenCaptureService : LifecycleService() {
             try {
                 while (isActive) {
                     val type = inputStream.readInt()
-                    Log.d(TAG, "type:${type} ")
                     when (type) {
                         101 -> receiveGlobalActionEvent(inputStream, controller)
                         102 -> receiveTouchEvent(inputStream, controller)
