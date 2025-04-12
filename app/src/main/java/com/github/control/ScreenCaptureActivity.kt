@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.blankj.utilcode.util.ThreadUtils
 import com.blankj.utilcode.util.ToastUtils
 import com.github.control.databinding.ActivityScreenCaptureBinding
 import kotlinx.coroutines.Dispatchers
@@ -103,12 +104,12 @@ class ScreenCaptureActivity : AppCompatActivity() {
                         }
 
                         CONFIGURATION_CHANGED -> {
-                            receiveConfigurationChanged(inputStream,binding.renderer)
+                            receiveConfigurationChanged(inputStream, binding.renderer)
                         }
                     }
                 }
             } catch (e: Exception) {
-//                ToastUtils.showLong("对端关闭")
+                ToastUtils.showLong("对端关闭")
                 withContext(Dispatchers.Main) {
                     finish()
                 }
@@ -116,20 +117,29 @@ class ScreenCaptureActivity : AppCompatActivity() {
         }
     }
 
+    private val executorService = ThreadUtils.getSinglePool()
     private fun initView() {
         binding.renderer.init(eglBaseContext, null)
         binding.renderer.setOnTouchListener { _, event ->
-            sendTouchEvent(outputStream, event, binding.renderer)
+            executorService.submit {
+                sendTouchEvent(outputStream, event, binding.renderer)
+            }
             true
         }
         binding.back.setOnClickListener {
-            sendGlobalActionEvent(outputStream, AccessibilityService.GLOBAL_ACTION_BACK)
+            executorService.submit {
+                sendGlobalActionEvent(outputStream, AccessibilityService.GLOBAL_ACTION_BACK)
+            }
         }
         binding.home.setOnClickListener {
-            sendGlobalActionEvent(outputStream, AccessibilityService.GLOBAL_ACTION_HOME)
+            executorService.submit {
+                sendGlobalActionEvent(outputStream, AccessibilityService.GLOBAL_ACTION_HOME)
+            }
         }
         binding.recents.setOnClickListener {
-            sendGlobalActionEvent(outputStream, AccessibilityService.GLOBAL_ACTION_RECENTS)
+            executorService.submit {
+                sendGlobalActionEvent(outputStream, AccessibilityService.GLOBAL_ACTION_RECENTS)
+            }
         }
     }
 

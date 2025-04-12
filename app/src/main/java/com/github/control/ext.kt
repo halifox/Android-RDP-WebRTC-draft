@@ -26,12 +26,9 @@ const val SESSION_DESCRIPTION = 202
 const val CONFIGURATION_CHANGED = 203
 
 fun sendGlobalActionEvent(outputStream: DataOutputStream, action: Int) {
-    ThreadUtils.getSinglePool()
-        .submit {
-            outputStream.writeInt(ACTION_EVENT)
-            outputStream.writeInt(action)
-            outputStream.flush()
-        }
+    outputStream.writeInt(ACTION_EVENT)
+    outputStream.writeInt(action)
+    outputStream.flush()
 }
 
 fun receiveGlobalActionEvent(inputStream: DataInputStream, controller: Controller) {
@@ -40,30 +37,27 @@ fun receiveGlobalActionEvent(inputStream: DataInputStream, controller: Controlle
 }
 
 fun sendTouchEvent(outputStream: DataOutputStream, event: MotionEvent, view: View) {
-    ThreadUtils.getSinglePool()
-        .submit {
-            val action = event.action
-            val pointerId = event.getPointerId(event.actionIndex)
-            val x = (event.getX(event.actionIndex) - view.x).toInt()
-            val y = (event.getY(event.actionIndex) - view.y).toInt()
-            val screenWidth = view.width
-            val screenHeight = view.height
-            val pressure = event.pressure
-            val actionButton = event.actionButton
-            val buttons = event.buttonState
+    val action = event.action
+    val pointerId = event.getPointerId(event.actionIndex)
+    val x = (event.getX(event.actionIndex) - view.x).toInt()
+    val y = (event.getY(event.actionIndex) - view.y).toInt()
+    val screenWidth = view.width
+    val screenHeight = view.height
+    val pressure = event.pressure
+    val actionButton = event.actionButton
+    val buttons = event.buttonState
 
-            outputStream.writeInt(TOUCH_EVENT)
-            outputStream.writeInt(action)
-            outputStream.writeInt(pointerId)
-            outputStream.writeInt(x)
-            outputStream.writeInt(y)
-            outputStream.writeInt(screenWidth)
-            outputStream.writeInt(screenHeight)
-            outputStream.writeFloat(pressure)
-            outputStream.writeInt(actionButton)
-            outputStream.writeInt(buttons)
-            outputStream.flush()
-        }
+    outputStream.writeInt(TOUCH_EVENT)
+    outputStream.writeInt(action)
+    outputStream.writeInt(pointerId)
+    outputStream.writeInt(x)
+    outputStream.writeInt(y)
+    outputStream.writeInt(screenWidth)
+    outputStream.writeInt(screenHeight)
+    outputStream.writeFloat(pressure)
+    outputStream.writeInt(actionButton)
+    outputStream.writeInt(buttons)
+    outputStream.flush()
 }
 
 fun receiveTouchEvent(inputStream: DataInputStream, controller: Controller) {
