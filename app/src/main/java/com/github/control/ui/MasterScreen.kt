@@ -24,7 +24,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.github.control.ScreenPullActivity
+import com.github.control.ScreenCaptureActivity
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,7 +111,7 @@ private fun resolveAndStartService(
     val serviceHost = serviceInfo.host
     val isResolve = serviceHost != null
     if (isResolve) {
-        ScreenPullActivity.start(context, serviceHost.hostName)
+        ScreenCaptureActivity.start(context, serviceHost.hostName, serviceInfo.port)
     } else {
         nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
             override fun onResolveFailed(serviceInfo: NsdServiceInfo?, errorCode: Int) {
@@ -123,7 +123,7 @@ private fun resolveAndStartService(
                 val serviceHost = serviceInfo.host
                 val isResolve = serviceHost != null
                 if (isResolve) {
-                    ScreenPullActivity.start(context, serviceHost.hostName)
+                    ScreenCaptureActivity.start(context, serviceHost.hostName, serviceInfo.port)
                 }
             }
         })

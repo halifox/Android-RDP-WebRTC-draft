@@ -10,28 +10,29 @@ import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationChannelGroupCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.lifecycleScope
 import com.blankj.utilcode.util.ScreenUtils
 import com.blankj.utilcode.util.ServiceUtils
 import com.github.control.gesture.Controller
-import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.nio.NioEventLoopGroup
-import io.netty.channel.socket.SocketChannel
-import io.netty.channel.socket.nio.NioServerSocketChannel
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder
-import io.netty.handler.codec.LengthFieldPrepender
-import io.netty.handler.codec.bytes.ByteArrayDecoder
-import io.netty.handler.codec.bytes.ByteArrayEncoder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.webrtc.EglBase
 import org.webrtc.HardwareVideoDecoderFactory
 import org.webrtc.HardwareVideoEncoderFactory
+import org.webrtc.IceCandidate
+import org.webrtc.MediaConstraints
+import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.ScreenCapturerAndroid
+import org.webrtc.SessionDescription
 import org.webrtc.SurfaceTextureHelper
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.net.ServerSocket
+import java.net.Socket
 
 
 class ScreenCaptureService : LifecycleService() {
@@ -60,7 +61,7 @@ class ScreenCaptureService : LifecycleService() {
     }
 
     private val context = this
-    private val gestureInputController by inject<Controller>()
+    private val controller by inject<Controller>()
 
     private val eglBase = EglBase.create()
     private val eglBaseContext = eglBase.getEglBaseContext()
@@ -71,23 +72,81 @@ class ScreenCaptureService : LifecycleService() {
     private val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext, true)
     private val videoSource = peerConnectionFactory.createVideoSource(true, true)
     private val videoTrack = peerConnectionFactory.createVideoTrack("local_video_track", videoSource)
+    private val rtcConfig = PeerConnection.RTCConfiguration(emptyList())
+
+
+    private lateinit var peerConnection: PeerConnection
+    private lateinit var serverSocket: ServerSocket
+    private lateinit var socket: Socket
+    private lateinit var inputStream: DataInputStream
+    private lateinit var outputStream: DataOutputStream
 
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate: ")
         startForegroundService()
-        startNettyServer()
         startNsdService()
-    }
 
+        lifecycleScope.launch(Dispatchers.IO) {
+            serverSocket = ServerSocket(40000)
+            socket = serverSocket.accept()
+            inputStream = DataInputStream(socket.inputStream)
+            outputStream = DataOutputStream(socket.outputStream)
+            createPeerConnection()
+            startReadThread()
+        }
+    }
 
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "onDestroy: ")
         stopForegroundService()
-        stopNettyServer()
         stopNsdService()
+        eglBase.release()
+        screenCapturerAndroid?.stopCapture()
+        screenCapturerAndroid?.dispose()
+        inputStream.close()
+        outputStream.close()
+        socket.close()
+        serverSocket.close()
+    }
+
+
+    private fun createPeerConnection() {
+        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : EmptyPeerConnectionObserver() {
+            override fun onIceCandidate(iceCandidate: IceCandidate) {
+                sendIceCandidate(outputStream, iceCandidate)
+            }
+        })!!
+        peerConnection.addTrack(videoTrack)
+        peerConnection.createOffer(object : EmptySdpObserver() {
+            override fun onCreateSuccess(description: SessionDescription) {
+                peerConnection.setLocalDescription(EmptySdpObserver(), description)
+                sendSessionDescription(outputStream, description)
+            }
+        }, MediaConstraints())
+    }
+
+
+    private fun startReadThread() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                while (isActive) {
+                    val type = inputStream.readInt()
+                    Log.d(TAG, "type:${type} ")
+                    when (type) {
+                        101 -> receiveGlobalActionEvent(inputStream, controller)
+                        102 -> receiveTouchEvent(inputStream, controller)
+                        201 -> receiveIceCandidate(inputStream, peerConnection)
+                        202 -> receiveSessionDescription(inputStream, peerConnection)
+                    }
+                }
+            } catch (e: Exception) {
+
+            }
+        }
+
     }
 
 
@@ -100,70 +159,18 @@ class ScreenCaptureService : LifecycleService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
-
+    private var screenCapturerAndroid: ScreenCapturerAndroid? = null
     private fun initScreenCapturerAndroid(screenCaptureIntent: Intent) {
-        ScreenCapturerAndroid(screenCaptureIntent, object : MediaProjection.Callback() {
+        screenCapturerAndroid = ScreenCapturerAndroid(screenCaptureIntent, object : MediaProjection.Callback() {
             override fun onStop() {
                 stopSelf()
             }
         }).apply {
             initialize(surfaceTextureHelper, applicationContext, videoSource.capturerObserver)
             startCapture(ScreenUtils.getScreenWidth(), ScreenUtils.getScreenHeight(), 0)
-            lifecycle.addObserver(object : DefaultLifecycleObserver {
-                override fun onDestroy(owner: LifecycleOwner) {
-                    stopCapture()
-                    dispose()
-                }
-            })
         }
     }
 
-
-    /**
-     *  Netty
-     */
-    private val bossGroup = NioEventLoopGroup()
-    private val workerGroup = NioEventLoopGroup()
-    private fun startNettyServer() {
-        ServerBootstrap()
-            .group(bossGroup, workerGroup)
-            .channel(NioServerSocketChannel::class.java)
-            .childHandler(object : ChannelInitializer<SocketChannel>() {
-                override fun initChannel(channel: SocketChannel) {
-                    channel.pipeline()
-                        .addLast(LengthFieldBasedFrameDecoder(Int.MAX_VALUE, 0, 4, 0, 4))
-                        .addLast(LengthFieldPrepender(4))
-                        .addLast(ByteArrayDecoder())
-                        .addLast(ByteArrayEncoder())
-                        .addLast(ControlInboundHandler(gestureInputController = gestureInputController))
-                        .addLast(PeerConnectionInboundHandler(peerConnectionFactory, videoTrack, isOffer = true))
-                }
-            })
-            .bind(40000)
-            .apply {
-                addListener { future ->
-                    if (future.isSuccess) {
-                        println("Success to start server : $40000")
-                    } else {
-                        println("Failed to start server")
-                        future.cause()
-                            .printStackTrace()
-                    }
-                }
-            }//
-            .channel()//
-            .closeFuture()
-            .apply {
-                addListener {
-                    stopNettyServer()
-                }
-            }
-    }
-
-    private fun stopNettyServer() {
-        workerGroup.shutdownGracefully()
-        bossGroup.shutdownGracefully()
-    }
 
     /**
      * ForegroundService
@@ -184,7 +191,7 @@ class ScreenCaptureService : LifecycleService() {
             .build()
         notificationManager.createNotificationChannelsCompat(mutableListOf(notificationChannel))
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.outline_screen_record_24)
             .setContentTitle("录屏服务正在运行")
             .setSilent(true)
             .setOngoing(true)

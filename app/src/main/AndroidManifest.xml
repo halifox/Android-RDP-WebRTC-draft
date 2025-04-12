@@ -23,7 +23,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ScreenPullActivity"
+            android:name=".ScreenCaptureActivity"
             android:exported="true" />
 
         <service
