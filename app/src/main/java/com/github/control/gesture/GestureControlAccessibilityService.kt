@@ -44,7 +44,6 @@ class GestureControlAccessibilityService : AccessibilityService(), KoinComponent
             val pointerId = motionEvent.getPointerId(actionIndex)
             val x = motionEvent.getX(actionIndex)
             val y = motionEvent.getY(actionIndex)
-            Log.d("TAG", "handleEvent:x:${x} y:${y} ")
             when (actionMasked) {
                 MotionEvent.ACTION_DOWN -> onActionDown(pointerId, x, y, motionEvent)
                 MotionEvent.ACTION_UP -> onActionUp(pointerId, x, y, motionEvent)

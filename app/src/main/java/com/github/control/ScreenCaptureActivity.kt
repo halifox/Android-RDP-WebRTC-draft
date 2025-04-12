@@ -5,13 +5,14 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.blankj.utilcode.util.ToastUtils
 import com.github.control.databinding.ActivityPullBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.webrtc.EglBase
 import org.webrtc.HardwareVideoDecoderFactory
 import org.webrtc.HardwareVideoEncoderFactory
@@ -107,7 +108,10 @@ class ScreenCaptureActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-
+                ToastUtils.showLong("对端关闭")
+                withContext(Dispatchers.Main) {
+                    finish()
+                }
             }
         }
     }
@@ -117,9 +121,6 @@ class ScreenCaptureActivity : AppCompatActivity() {
         binding.renderer.setOnTouchListener { _, event ->
             sendTouchEvent(outputStream, event, binding.renderer)
             true
-        }
-        binding.renderer.post {
-            Log.d(TAG, "initView:${binding.renderer.x} ${binding.renderer.y} ${binding.renderer.width} ${binding.renderer.height}")
         }
         binding.back.setOnClickListener {
             sendGlobalActionEvent(outputStream, AccessibilityService.GLOBAL_ACTION_BACK)

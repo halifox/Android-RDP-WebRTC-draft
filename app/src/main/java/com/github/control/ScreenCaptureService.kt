@@ -14,10 +14,12 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.blankj.utilcode.util.ScreenUtils
 import com.blankj.utilcode.util.ServiceUtils
+import com.blankj.utilcode.util.ToastUtils
 import com.github.control.gesture.Controller
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.android.ext.android.inject
 import org.webrtc.EglBase
 import org.webrtc.HardwareVideoDecoderFactory
@@ -142,10 +144,12 @@ class ScreenCaptureService : LifecycleService() {
                     }
                 }
             } catch (e: Exception) {
-
+                ToastUtils.showLong("对端关闭")
+                withContext(Dispatchers.Main) {
+                    stopSelf()
+                }
             }
         }
-
     }
 
 
