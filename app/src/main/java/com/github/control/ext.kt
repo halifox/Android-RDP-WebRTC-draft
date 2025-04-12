@@ -1,12 +1,10 @@
 package com.github.control
 
 import android.graphics.Point
-import android.os.Handler
-import android.os.HandlerThread
-import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
 import android.view.View
+import com.blankj.utilcode.util.ThreadUtils
 import com.github.control.gesture.Controller
 import org.webrtc.DataChannel
 import org.webrtc.IceCandidate
@@ -18,17 +16,18 @@ import org.webrtc.SessionDescription
 import java.io.DataInputStream
 import java.io.DataOutputStream
 
-private const val TAG = "TAG"
-val ht = HandlerThread("ext").apply {
-    start()
-}
-val h = Handler(ht.looper)
+const val ACTION_EVENT = 101
+const val TOUCH_EVENT = 102
+const val ICE_CANDIDATE = 201
+const val SESSION_DESCRIPTION = 202
+
 fun sendGlobalActionEvent(outputStream: DataOutputStream, action: Int) {
-    h.post {
-        outputStream.writeInt(101)
-        outputStream.writeInt(action)
-        outputStream.flush()
-    }
+    ThreadUtils.getSinglePool()
+        .submit {
+            outputStream.writeInt(ACTION_EVENT)
+            outputStream.writeInt(action)
+            outputStream.flush()
+        }
 }
 
 fun receiveGlobalActionEvent(inputStream: DataInputStream, controller: Controller) {
@@ -37,29 +36,30 @@ fun receiveGlobalActionEvent(inputStream: DataInputStream, controller: Controlle
 }
 
 fun sendTouchEvent(outputStream: DataOutputStream, event: MotionEvent, view: View) {
-    h.post {
-        val action = event.action
-        val pointerId = event.getPointerId(event.actionIndex)
-        val x = (event.getX(event.actionIndex) - view.x).toInt()
-        val y = (event.getY(event.actionIndex) - view.y).toInt()
-        val screenWidth = view.width
-        val screenHeight = view.height
-        val pressure = event.pressure
-        val actionButton = event.actionButton
-        val buttons = event.buttonState
+    ThreadUtils.getSinglePool()
+        .submit {
+            val action = event.action
+            val pointerId = event.getPointerId(event.actionIndex)
+            val x = (event.getX(event.actionIndex) - view.x).toInt()
+            val y = (event.getY(event.actionIndex) - view.y).toInt()
+            val screenWidth = view.width
+            val screenHeight = view.height
+            val pressure = event.pressure
+            val actionButton = event.actionButton
+            val buttons = event.buttonState
 
-        outputStream.writeInt(102)
-        outputStream.writeInt(action)
-        outputStream.writeInt(pointerId)
-        outputStream.writeInt(x)
-        outputStream.writeInt(y)
-        outputStream.writeInt(screenWidth)
-        outputStream.writeInt(screenHeight)
-        outputStream.writeFloat(pressure)
-        outputStream.writeInt(actionButton)
-        outputStream.writeInt(buttons)
-        outputStream.flush()
-    }
+            outputStream.writeInt(TOUCH_EVENT)
+            outputStream.writeInt(action)
+            outputStream.writeInt(pointerId)
+            outputStream.writeInt(x)
+            outputStream.writeInt(y)
+            outputStream.writeInt(screenWidth)
+            outputStream.writeInt(screenHeight)
+            outputStream.writeFloat(pressure)
+            outputStream.writeInt(actionButton)
+            outputStream.writeInt(buttons)
+            outputStream.flush()
+        }
 }
 
 fun receiveTouchEvent(inputStream: DataInputStream, controller: Controller) {
@@ -77,7 +77,7 @@ fun receiveTouchEvent(inputStream: DataInputStream, controller: Controller) {
 
 
 fun sendIceCandidate(outputStream: DataOutputStream, iceCandidate: IceCandidate) {
-    outputStream.writeInt(201)
+    outputStream.writeInt(ICE_CANDIDATE)
     outputStream.writeUTF(iceCandidate.sdpMid)
     outputStream.writeInt(iceCandidate.sdpMLineIndex)
     outputStream.writeUTF(iceCandidate.sdp)
@@ -94,7 +94,7 @@ fun receiveIceCandidate(inputStream: DataInputStream, peerConnection: PeerConnec
 }
 
 fun sendSessionDescription(outputStream: DataOutputStream, sessionDescription: SessionDescription) {
-    outputStream.writeInt(202)
+    outputStream.writeInt(SESSION_DESCRIPTION)
     outputStream.writeUTF(sessionDescription.type.name)
     outputStream.writeUTF(sessionDescription.description)
     outputStream.flush()

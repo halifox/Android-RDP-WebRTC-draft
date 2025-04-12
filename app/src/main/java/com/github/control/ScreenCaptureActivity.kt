@@ -95,8 +95,8 @@ class ScreenCaptureActivity : AppCompatActivity() {
                 while (isActive) {
                     val type = inputStream.readInt()
                     when (type) {
-                        201 -> receiveIceCandidate(inputStream, peerConnection)
-                        202 -> {
+                        ICE_CANDIDATE -> receiveIceCandidate(inputStream, peerConnection)
+                        SESSION_DESCRIPTION -> {
                             receiveSessionDescription(inputStream, peerConnection)
                             peerConnection.createAnswer(object : EmptySdpObserver() {
                                 override fun onCreateSuccess(description: SessionDescription) {

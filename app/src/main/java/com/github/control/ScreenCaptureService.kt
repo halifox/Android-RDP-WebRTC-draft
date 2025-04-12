@@ -137,10 +137,10 @@ class ScreenCaptureService : LifecycleService() {
                 while (isActive) {
                     val type = inputStream.readInt()
                     when (type) {
-                        101 -> receiveGlobalActionEvent(inputStream, controller)
-                        102 -> receiveTouchEvent(inputStream, controller)
-                        201 -> receiveIceCandidate(inputStream, peerConnection)
-                        202 -> receiveSessionDescription(inputStream, peerConnection)
+                        ACTION_EVENT -> receiveGlobalActionEvent(inputStream, controller)
+                        TOUCH_EVENT -> receiveTouchEvent(inputStream, controller)
+                        ICE_CANDIDATE -> receiveIceCandidate(inputStream, peerConnection)
+                        SESSION_DESCRIPTION -> receiveSessionDescription(inputStream, peerConnection)
                     }
                 }
             } catch (e: Exception) {
