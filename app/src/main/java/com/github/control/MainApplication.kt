@@ -1,11 +1,11 @@
 package com.github.control
 
 import android.app.Application
+import android.hardware.usb.UsbManager
 import android.media.projection.MediaProjectionManager
 import android.net.nsd.NsdManager
 import androidx.core.content.ContextCompat
-import com.github.control.gesture.GestureServiceDelegate
-import com.github.control.gesture.GestureInputController
+import com.github.control.gesture.Controller
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -14,7 +14,7 @@ import org.koin.dsl.module
 import org.webrtc.PeerConnectionFactory
 
 
-class APP : Application() {
+class MainApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         PeerConnectionFactory.initialize(
@@ -27,9 +27,9 @@ class APP : Application() {
             androidContext(applicationContext)
             modules(module {
                 single { ContextCompat.getSystemService(get(), NsdManager::class.java) }
+                single { ContextCompat.getSystemService(get(), UsbManager::class.java) }
                 single { ContextCompat.getSystemService(get(), MediaProjectionManager::class.java) }
-                singleOf(::GestureInputController)
-                singleOf(::GestureServiceDelegate)
+                singleOf(::Controller)
             })
         }
     }

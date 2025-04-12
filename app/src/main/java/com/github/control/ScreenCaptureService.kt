@@ -15,7 +15,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleService
 import com.blankj.utilcode.util.ScreenUtils
 import com.blankj.utilcode.util.ServiceUtils
-import com.github.control.gesture.GestureInputController
+import com.github.control.gesture.Controller
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -60,7 +60,7 @@ class ScreenCaptureService : LifecycleService() {
     }
 
     private val context = this
-    private val gestureInputController by inject<GestureInputController>()
+    private val gestureInputController by inject<Controller>()
 
     private val eglBase = EglBase.create()
     private val eglBaseContext = eglBase.getEglBaseContext()

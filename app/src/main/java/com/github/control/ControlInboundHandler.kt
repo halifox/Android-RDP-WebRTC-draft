@@ -4,8 +4,7 @@ import android.graphics.Point
 import android.util.Size
 import android.view.KeyEvent
 import android.view.MotionEvent
-import com.github.control.gesture.GestureInputController
-import com.github.control.gesture.Position
+import com.github.control.gesture.Controller
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.PooledByteBufAllocator
 import io.netty.channel.ChannelHandlerContext
@@ -28,7 +27,7 @@ class KeyBoardEvent(val event: KeyEvent) : Event()
 class ActionEvent(val action: Int) : Event()
 
 class ControlInboundHandler(
-    private val gestureInputController: GestureInputController? = null,
+    private val gestureInputController: Controller? = null,
     private val eventChannel: Channel<Event>? = null
 
 ) : SimpleChannelInboundHandler<ByteArray>() {
@@ -115,8 +114,7 @@ class ControlInboundHandler(
         val pressure = byteBuf.readFloat()
         val actionButton = byteBuf.readInt()
         val buttons = byteBuf.readInt()
-        val position = Position(Point(x, y), Size(screenWidth, screenHeight))
-        gestureInputController?.injectTouch(action, pointerId, position, pressure, actionButton, buttons)
+        gestureInputController?.injectTouch(action, pointerId, Point(x, y), Size(screenWidth, screenHeight), pressure, actionButton, buttons)
     }
 
     private fun sendGlobalActionEvent(ctx: ChannelHandlerContext, action: Int) {
