@@ -75,7 +75,7 @@ class ScreenCaptureService : LifecycleService() {
     private val eglBase = EglBase.create()
     private val eglBaseContext = eglBase.getEglBaseContext()
     private val peerConnectionFactory = PeerConnectionFactory.builder()
-        .setVideoEncoderFactory(HardwareVideoEncoderFactory(eglBaseContext, true, true))
+        .setVideoEncoderFactory(HardwareVideoEncoderFactory(eglBaseContext, false, false))
         .setVideoDecoderFactory(HardwareVideoDecoderFactory(eglBaseContext))
         .createPeerConnectionFactory()
     private val surfaceTextureHelper = SurfaceTextureHelper.create("surface_texture_thread", eglBaseContext, true)
